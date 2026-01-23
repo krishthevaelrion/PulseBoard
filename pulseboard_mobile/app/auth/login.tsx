@@ -88,7 +88,7 @@ export default function LoginScreen() {
         </TouchableOpacity>
 
         {/* Footer */}
-        <TouchableOpacity onPress={() => router.push('/')}>
+        <TouchableOpacity onPress={() => router.push('/auth/')}>
           <Text className="text-center mt-6 text-gray-500 text-sm">
             Doesn't have an account?{' '}
             <Text style={{ color: PRIMARY_PURPLE }} className="font-bold">

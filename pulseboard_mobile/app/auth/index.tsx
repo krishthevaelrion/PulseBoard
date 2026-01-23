@@ -78,7 +78,7 @@ export default function MainScreen() {
         <View className="flex-row justify-between">
           <TouchableOpacity
             activeOpacity={0.8}
-            onPress={() => router.push('/login')}
+            onPress={() => router.push('/auth/login')}
             style={{
               backgroundColor: '#F3EFFF',
               borderColor: PRIMARY_PURPLE,
@@ -92,7 +92,7 @@ export default function MainScreen() {
 
           <TouchableOpacity
             activeOpacity={0.8}
-            onPress={() => router.push('/register')}
+            onPress={() => router.push('/auth/register')}
             style={{ backgroundColor: PRIMARY_PURPLE }}
             className="h-14 rounded-2xl justify-center items-center w-[48%]"
           >

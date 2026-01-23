@@ -102,7 +102,7 @@ export default function RegisterScreen() {
         </TouchableOpacity>
 
         {/* Footer */}
-        <TouchableOpacity onPress={() => router.push('/login')}>
+        <TouchableOpacity onPress={() => router.push('/auth/login')}>
           <Text className="text-center mt-6 text-gray-500 text-sm">
             Already have an account?{' '}
             <Text style={{ color: PRIMARY_PURPLE }} className="font-bold">
