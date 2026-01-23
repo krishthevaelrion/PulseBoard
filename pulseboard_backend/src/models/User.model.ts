@@ -3,7 +3,8 @@ import mongoose, { Schema, Document, Model } from "mongoose";
 export interface IUser extends Document {
   name: string;
   email: string;
-  googleId: string;
+  provider: "local" | "google";
+  googleId?: string;
   password?: string;
   year?: number;
   branch?: string;
@@ -13,12 +14,38 @@ export interface IUser extends Document {
 const UserSchema: Schema = new Schema(
   {
     name: { type: String, required: true },
-    email: { type: String, required: true, unique: true },
-    googleId: { type: String, required: true },
-    // Set to false so OAuth doesn't crash
-    password: { type: String, required: false }, 
-    year: { type: Number, required: false },
-    branch: { type: String, required: false },
+
+    email: {
+      type: String,
+      required: true,
+      unique: true,
+      lowercase: true,
+      trim: true,
+    },
+
+    provider: {
+      type: String,
+      enum: ["local", "google"],
+      required: true,
+    },
+
+    googleId: {
+      type: String,
+      required: function (this: any) {
+        return this.provider === "google";
+      },
+    },
+
+    password: {
+      type: String,
+      required: function (this: any) {
+        return this.provider === "local";
+      },
+    },
+
+    year: Number,
+    branch: String,
+
     preferences: [
       {
         type: mongoose.Schema.Types.ObjectId,

@@ -6,9 +6,12 @@ import {
   SafeAreaView,
   Dimensions,
   TextInput,
+  Alert,
+  ActivityIndicator
 } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { router } from 'expo-router';
+import { loginUser } from '../../src/services/auth.service';
 
 const { width, height } = Dimensions.get('window');
 const PRIMARY_PURPLE = '#8A56F1';
@@ -16,6 +19,26 @@ const PRIMARY_PURPLE = '#8A56F1';
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleLogin = async () => {
+    if (!email || !password) {
+      Alert.alert('Missing Fields', 'Please enter both email and password.');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await loginUser({ email, password });
+      // Redirect to home tabs on success
+      router.replace('/(tabs)/home');
+    } catch (error: any) {
+      const msg = error?.response?.data?.message || 'Login failed. Please try again.';
+      Alert.alert('Login Error', msg);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <View className="flex-1 bg-white">
@@ -81,18 +104,23 @@ export default function LoginScreen() {
         {/* Button */}
         <TouchableOpacity
           style={{ backgroundColor: PRIMARY_PURPLE }}
-          className="h-14 rounded-2xl justify-center items-center mt-5 shadow-lg"
-          onPress={() => console.log('Logging user...')}
+          className={`h-14 rounded-2xl justify-center items-center mt-5 shadow-lg ${loading ? 'opacity-70' : ''}`}
+          onPress={handleLogin}
+          disabled={loading}
         >
-          <Text className="text-white text-lg font-bold">Login</Text>
+          {loading ? (
+            <ActivityIndicator color="white" />
+          ) : (
+            <Text className="text-white text-lg font-bold">Login</Text>
+          )}
         </TouchableOpacity>
 
         {/* Footer */}
-        <TouchableOpacity onPress={() => router.push('/auth/')}>
+        <TouchableOpacity onPress={() => router.push('/auth/register')}>
           <Text className="text-center mt-6 text-gray-500 text-sm">
-            Doesn't have an account?{' '}
+            Don't have an account?{' '}
             <Text style={{ color: PRIMARY_PURPLE }} className="font-bold">
-              Login
+              Sign Up
             </Text>
           </Text>
         </TouchableOpacity>

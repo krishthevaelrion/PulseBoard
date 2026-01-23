@@ -1,22 +1,38 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
+import { registerUser } from "../../src/services/auth.service";
 import {
   View,
   Text,
   TouchableOpacity,
-  SafeAreaView,
   Dimensions,
   TextInput,
-} from 'react-native';
-import Svg, { Path } from 'react-native-svg';
-import { router } from 'expo-router';
+} from "react-native";
+import Svg, { Path } from "react-native-svg";
+import { router } from "expo-router";
 
-const { width, height } = Dimensions.get('window');
-const PRIMARY_PURPLE = '#8A56F1';
+const { width, height } = Dimensions.get("window");
+const PRIMARY_PURPLE = "#8A56F1";
 
 export default function RegisterScreen() {
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+
+  const handleRegister = async () => {
+    try {
+      if (!name || !email || !password) {
+        alert("All fields are required!");
+        return;
+      }
+
+      await registerUser({ name, email, password });
+
+      alert("Account created successfully");
+      router.replace("/auth/login");
+    } catch (err: any) {
+      alert(err?.response?.data?.message || "Signup Failed");
+    }
+  };
 
   return (
     <View className="flex-1 bg-white">
@@ -25,25 +41,32 @@ export default function RegisterScreen() {
         style={{ height: height * 0.25, backgroundColor: PRIMARY_PURPLE }}
         className="justify-center items-center"
       >
-        <SafeAreaView className="absolute top-6 left-3">
+        <View className="absolute top-10 left-3">
           <TouchableOpacity onPress={() => router.back()} className="p-2">
-            <Text className="text-white text-base font-semibold">{'<'} Back</Text>
+            <Text className="text-white text-base font-semibold">
+              {"<"} Back
+            </Text>
           </TouchableOpacity>
-        </SafeAreaView>
-
-        <View className="mt-5">
-          <Text className="text-white text-3xl font-bold">
-            Create Account
-          </Text>
         </View>
+
+        <Text className="text-white text-3xl font-bold mt-6">
+          Create Account
+        </Text>
       </View>
 
       {/* Wave */}
       <View className="-mt-1">
-        <Svg height="120" width={width} viewBox={`0 0 ${width} 120`} preserveAspectRatio="none">
+        <Svg
+          height="120"
+          width={width}
+          viewBox={`0 0 ${width} 120`}
+          preserveAspectRatio="none"
+        >
           <Path
             fill={PRIMARY_PURPLE}
-            d={`M0,0 L${width},0 L${width},40 C${width * 0.8},120 ${width * 0.2},120 0,40 Z`}
+            d={`M0,0 L${width},0 L${width},40 C${
+              width * 0.8
+            },120 ${width * 0.2},120 0,40 Z`}
           />
         </Svg>
       </View>
@@ -96,15 +119,15 @@ export default function RegisterScreen() {
         <TouchableOpacity
           style={{ backgroundColor: PRIMARY_PURPLE }}
           className="h-14 rounded-2xl justify-center items-center mt-5 shadow-lg"
-          onPress={() => console.log('Registering user...')}
+          onPress={handleRegister}
         >
           <Text className="text-white text-lg font-bold">Sign Up</Text>
         </TouchableOpacity>
 
         {/* Footer */}
-        <TouchableOpacity onPress={() => router.push('/auth/login')}>
+        <TouchableOpacity onPress={() => router.push("/auth/login")}>
           <Text className="text-center mt-6 text-gray-500 text-sm">
-            Already have an account?{' '}
+            Already have an account?{" "}
             <Text style={{ color: PRIMARY_PURPLE }} className="font-bold">
               Login
             </Text>
