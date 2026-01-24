@@ -1,17 +1,40 @@
-
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, SafeAreaView, TextInput, StatusBar } from 'react-native';
+import { 
+  View, 
+  Text, 
+  TouchableOpacity, 
+  SafeAreaView, 
+  TextInput, 
+  StatusBar, 
+  Alert, 
+  ActivityIndicator 
+} from 'react-native';
 import { router } from 'expo-router';
+// Importing your service logic
+import { loginUser } from '../../src/services/auth.service';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleLogin = () => {
-    if (email && password) {
+  // YOUR LOGIC: Async login with error handling
+  const handleLogin = async () => {
+    if (!email || !password) {
+      Alert.alert('Missing Fields', 'Please enter both email and password.');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await loginUser({ email, password });
+      // YOUR PATH: Using your specific route
       router.replace('/tabs/home');
-    } else {
-      console.log('Please fill in all fields');
+    } catch (error: any) {
+      const msg = error?.response?.data?.message || 'Login failed. Please try again.';
+      Alert.alert('Login Error', msg);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -72,14 +95,19 @@ export default function LoginScreen() {
           />
         </View>
 
-        {/* Button */}
+        {/* Button - Modified to show Loading Indicator */}
         <TouchableOpacity
-          className="bg-cyber-green h-14 rounded-full justify-center items-center mt-2"
+          className={`bg-cyber-green h-14 rounded-full justify-center items-center mt-2 ${loading ? 'opacity-70' : ''}`}
           onPress={handleLogin}
+          disabled={loading}
         >
-          <Text className="text-black text-base font-black tracking-widest">
-            LOGIN
-          </Text>
+          {loading ? (
+            <ActivityIndicator color="black" />
+          ) : (
+            <Text className="text-black text-base font-black tracking-widest">
+              LOGIN
+            </Text>
+          )}
         </TouchableOpacity>
 
         {/* Footer */}

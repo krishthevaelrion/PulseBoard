@@ -1,7 +1,36 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, TextInput, SafeAreaView, StatusBar, Modal } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, TextInput, SafeAreaView, StatusBar, Modal, GestureResponderEvent } from 'react-native';
 import { Search, Bell, Menu, X, TrendingUp, Calendar, Target, Film, Code, Trophy, Palette, GraduationCap, Briefcase, Mic2, BookOpen, LogOut } from 'lucide-react-native';
 import { router } from 'expo-router';
+
+// 1. Define the shape of your Event data
+interface EventItem {
+  id: number;
+  title: string;
+  club: string;
+  category: string;
+  icon: string;
+  badge: string;
+  date: string;
+  location: string;
+  interested: string;
+  tags: string[];
+}
+
+// 2. Define the props for SidebarItem
+interface SidebarItemProps {
+  icon: React.ComponentType<any>; // Accepts any React component (like Lucide icons)
+  text: string;
+  onPress: (event: GestureResponderEvent) => void;
+}
+
+// 3. Moved Component outside to prevent re-creation on every render
+const SidebarItem = ({ icon: Icon, text, onPress }: SidebarItemProps) => (
+  <TouchableOpacity className="flex-row items-center py-3 pl-2" onPress={onPress}>
+    <Icon color="#00ff88" size={20} className="mr-4" />
+    <Text className="text-neutral-300 text-base">{text}</Text>
+  </TouchableOpacity>
+);
 
 export default function HomeScreen() {
   const [activeFilter, setActiveFilter] = useState('all');
@@ -9,7 +38,7 @@ export default function HomeScreen() {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showSidebar, setShowSidebar] = useState(false);
 
-  const events = [
+  const events: EventItem[] = [
     {
       id: 1,
       title: 'Annual Theatre Festival',
@@ -73,12 +102,14 @@ export default function HomeScreen() {
     { id: 3, time: '3 hours ago', text: 'Dramatics Society posted new photos', unread: false }
   ];
 
-  const filterEvents = (category) => {
+  // 4. Added type 'string' to category
+  const filterEvents = (category: string) => {
     if (category === 'all') return events;
     return events.filter(e => e.category.includes(category));
   };
 
-  const searchEvents = (query) => {
+  // 5. Added type 'string' to query
+  const searchEvents = (query: string) => {
     if (!query) return filterEvents(activeFilter);
     return filterEvents(activeFilter).filter(e => 
       e.title.toLowerCase().includes(query.toLowerCase()) ||
@@ -91,13 +122,6 @@ export default function HomeScreen() {
   };
 
   const displayedEvents = searchEvents(searchQuery);
-
-  const SidebarItem = ({ icon: Icon, text, onPress }) => (
-    <TouchableOpacity className="flex-row items-center py-3 pl-2" onPress={onPress}>
-      <Icon color="#00ff88" size={20} className="mr-4" />
-      <Text className="text-neutral-300 text-base">{text}</Text>
-    </TouchableOpacity>
-  );
 
   return (
     <SafeAreaView className="flex-1 bg-black">

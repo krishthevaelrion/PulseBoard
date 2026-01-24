@@ -1,17 +1,43 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, SafeAreaView, TextInput, StatusBar } from 'react-native';
+import { 
+  View, 
+  Text, 
+  TouchableOpacity, 
+  SafeAreaView, 
+  TextInput, 
+  StatusBar, 
+  Alert, 
+  ActivityIndicator 
+} from 'react-native';
 import { router } from 'expo-router';
+// Importing your service logic
+import { registerUser } from '../../src/services/auth.service';
 
 export default function RegisterScreen() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleRegister = () => {
-    if (name && email && password) {
-      router.replace('/tabs/home');
-    } else {
-      console.log('Please fill in all fields');
+  // YOUR LOGIC: Async registration with error handling
+  const handleRegister = async () => {
+    if (!name || !email || !password) {
+      Alert.alert('Missing Fields', 'All fields are required!');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await registerUser({ name, email, password });
+      
+      Alert.alert('Success', 'Account created successfully');
+      // YOUR PATH: Redirect to login after successful registration
+      router.replace('/auth/login');
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || 'Signup Failed';
+      Alert.alert('Registration Error', msg);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -86,14 +112,19 @@ export default function RegisterScreen() {
           />
         </View>
 
-        {/* Button */}
+        {/* Button with Loading State */}
         <TouchableOpacity
-          className="bg-cyber-green h-14 rounded-full justify-center items-center mt-2"
+          className={`bg-cyber-green h-14 rounded-full justify-center items-center mt-2 ${loading ? 'opacity-70' : ''}`}
           onPress={handleRegister}
+          disabled={loading}
         >
-          <Text className="text-black text-base font-black tracking-widest">
-            SIGN UP
-          </Text>
+          {loading ? (
+            <ActivityIndicator color="black" />
+          ) : (
+            <Text className="text-black text-base font-black tracking-widest">
+              SIGN UP
+            </Text>
+          )}
         </TouchableOpacity>
 
         {/* Footer */}
