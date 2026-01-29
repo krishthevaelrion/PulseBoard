@@ -8,7 +8,7 @@ export interface IUser extends Document {
   password?: string;
   year?: number;
   branch?: string;
-  preferences: mongoose.Types.ObjectId[];
+  following: number[]; 
 }
 
 const UserSchema: Schema = new Schema(
@@ -46,12 +46,10 @@ const UserSchema: Schema = new Schema(
     year: Number,
     branch: String,
 
-    preferences: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Club",
-      },
-    ],
+    following: {
+      type: [Number],
+      default: [],
+    },
   },
   { timestamps: true }
 );

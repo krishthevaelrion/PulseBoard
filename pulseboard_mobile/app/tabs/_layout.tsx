@@ -1,24 +1,41 @@
+import React from 'react';
+import { Platform } from 'react-native';
 import { Tabs } from 'expo-router';
 import { Home, Users, User } from 'lucide-react-native';
+
+// --- THEME CONSTANTS ---
+const THEME = {
+  ACCENT: '#CCF900',      // Volt Yellow
+  BG: '#09090B',          // Deep Matte Black
+  BORDER: 'rgba(255, 255, 255, 0.1)', // Subtle Glass Edge
+  INACTIVE: '#52525B',    // Zinc 600
+};
 
 export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
+        
+        // --- TAB BAR STYLING ---
         tabBarStyle: {
-          backgroundColor: '#000',
-          borderTopColor: 'rgba(0, 255, 136, 0.3)',
-          borderTopWidth: 2,
-          height: 60,
-          paddingBottom: 8,
+          backgroundColor: THEME.BG,
+          borderTopColor: THEME.BORDER,
+          borderTopWidth: 1,
+          height: Platform.OS === 'ios' ? 88 : 60, // Taller on iOS for home indicator
+          paddingBottom: Platform.OS === 'ios' ? 28 : 8,
+          paddingTop: 8,
+          elevation: 0, // Remove Android shadow for a flat, clean look
         },
-        tabBarActiveTintColor: '#00ff88',
-        tabBarInactiveTintColor: '#666',
+        
+        // --- TEXT STYLING ---
+        tabBarActiveTintColor: THEME.ACCENT,
+        tabBarInactiveTintColor: THEME.INACTIVE,
         tabBarLabelStyle: {
-          fontSize: 12,
-          fontWeight: '600',
+          fontSize: 10,
+          fontWeight: '700',
           letterSpacing: 1,
+          marginTop: -4, // Pull text slightly closer to icon
         },
       }}
     >
@@ -26,21 +43,27 @@ export default function TabLayout() {
         name="home"
         options={{
           title: 'HOME',
-          tabBarIcon: ({ color, size }) => <Home color={color} size={size} />,
+          tabBarIcon: ({ color, size }) => (
+            <Home color={color} size={24} strokeWidth={2.5} />
+          ),
         }}
       />
       <Tabs.Screen
         name="clubs"
         options={{
           title: 'CLUBS',
-          tabBarIcon: ({ color, size }) => <Users color={color} size={size} />,
+          tabBarIcon: ({ color, size }) => (
+            <Users color={color} size={24} strokeWidth={2.5} />
+          ),
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
           title: 'PROFILE',
-          tabBarIcon: ({ color, size }) => <User color={color} size={size} />,
+          tabBarIcon: ({ color, size }) => (
+            <User color={color} size={24} strokeWidth={2.5} />
+          ),
         }}
       />
     </Tabs>

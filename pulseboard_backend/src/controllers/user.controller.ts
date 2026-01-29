@@ -7,7 +7,7 @@ export const getMyProfile = async (req: Request, res: Response) => {
     const userId = req.user?.userId;
 
     // Fetch user but ONLY get name and interests (lean query)
-    const user = await User.findById(userId).select('name interests');
+    const user = await User.findById(userId).select('name following');
 
     if (!user) {
       return res.status(404).json({ message: 'User not found' });

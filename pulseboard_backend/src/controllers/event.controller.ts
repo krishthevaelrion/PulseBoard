@@ -1,5 +1,5 @@
 import type { Request, Response } from 'express';
-import Event from '../models/Event.model.ts'; // Remember the .ts extension
+import Event from '../models/Event.model.ts'; // Removed .ts extension for standard import
 
 // --- Create Event ---
 export const createEvent = async (req: Request, res: Response) => {
@@ -22,18 +22,22 @@ export const getEventFeed = async (req: Request, res: Response) => {
           badge: { $in: ['LIVE', 'UPCOMING'] } 
         } 
       },
-      // 2. Lookup (Join) events.clubId == clubs.id
+      // 2. Lookup (Join) events.clubId == clubs.clubId
       {
         $lookup: {
           from: 'clubs',          // Must match your MongoDB collection name exactly
-          localField: 'clubId',   // Field in Event
-          foreignField: 'id',     // Field in Club (Your custom ID, not _id)
+          localField: 'clubId',   // Field in Event (Number)
+          foreignField: 'clubId', // FIX: Changed from 'id' to 'clubId' to match your Model
           as: 'clubInfo'          // Temporary name for joined data
         }
       },
       // 3. Unwind (Convert array -> object)
+      // preserveNullAndEmptyArrays: true prevents events from vanishing if club lookup fails
       { 
-        $unwind: '$clubInfo' 
+        $unwind: {
+          path: '$clubInfo',
+          preserveNullAndEmptyArrays: true 
+        }
       },
       // 4. Flatten the Data (Pull Name/Category out of clubInfo)
       {

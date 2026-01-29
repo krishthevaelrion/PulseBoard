@@ -4,7 +4,6 @@ export interface IEvent extends Document {
   clubId: number;      // The link to the Club ID (e.g., 11, 15)
   title: string;
   description?: string;
-  // NOTE: clubName and category are removed. Fetched dynamically.
   icon: string;        
   badge: 'LIVE' | 'UPCOMING';
   date: Date;          
