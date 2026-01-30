@@ -4,7 +4,8 @@ import {
   SafeAreaView, StatusBar, Modal, ActivityIndicator 
 } from 'react-native';
 import { 
-  Menu, Calendar, PlayCircle, MapPin, LogOut 
+  Menu, Calendar, PlayCircle, MapPin, LogOut, 
+  User
 } from 'lucide-react-native';
 import { router, useFocusEffect } from 'expo-router'; // <--- NEW IMPORT
 // Import BOTH APIs
@@ -37,11 +38,11 @@ export default function HomeScreen() {
   const [events, setEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // --- REAL USER STATE ---
-  const [user, setUser] = useState<{ name: string; following: number[] }>({
-    name: "Loading...",
-    following: [] 
-  });
+  // --- REAL USER STATE
+const [user, setUser] = useState({
+  name: "Loading...",  // Initial placeholder name
+  following: [],       // Initial empty array
+});
 
   // --- THE FIX: USE FOCUS EFFECT ---
   // This runs EVERY time you click the "Home" tab
@@ -86,8 +87,8 @@ export default function HomeScreen() {
   // --- Sorting Logic ---
   const sortEventsByFollowing = (eventsList: any[]) => {
     return [...eventsList].sort((a, b) => {
-      const aFollowed = user.following.includes(a.clubId);
-      const bFollowed = user.following.includes(b.clubId);
+      const aFollowed = (user as any).following.includes(a.clubId);
+      const bFollowed = (user as any).following.includes(b.clubId);
       
       if (aFollowed && !bFollowed) return -1;
       if (!aFollowed && bFollowed) return 1;
@@ -98,11 +99,11 @@ export default function HomeScreen() {
   // Recalculate lists whenever user.following changes
   const liveEvents = React.useMemo(() => 
     sortEventsByFollowing(events.filter((e: any) => e.badge === 'LIVE')), 
-  [user.following, events]);
+  [(user as any).following, events]);
 
   const upcomingEvents = React.useMemo(() => 
     sortEventsByFollowing(events.filter((e: any) => e.badge === 'UPCOMING')), 
-  [user.following, events]);
+  [(user as any).following, events]);
 
   if (loading && events.length === 0) {
     return (
@@ -124,7 +125,7 @@ export default function HomeScreen() {
               Welcome Back
             </Text>
             <Text className="text-white text-3xl font-black tracking-tight">
-              {user.name}.
+              {(user as any).name},
             </Text>
           </View>
           <View className="flex-row gap-4">
@@ -141,7 +142,7 @@ export default function HomeScreen() {
           
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 24 }} className="mb-10">
             {liveEvents.map((event: any) => {
-              const isFollowed = user.following.includes(event.clubId);
+              const isFollowed = (user as any).following.includes(event.clubId);
               const cardColor = event.color || THEME_ACCENT; 
               
               return (
@@ -198,7 +199,7 @@ export default function HomeScreen() {
           
           <View className="px-6 mb-10 space-y-3">
             {upcomingEvents.map((event: any) => {
-               const isFollowed = user.following.includes(event.clubId);
+               const isFollowed = (user as any).following.includes(event.clubId);
                const cardColor = event.color || '#fff';
                const dateObj = new Date(event.date);
                const day = dateObj.getDate();

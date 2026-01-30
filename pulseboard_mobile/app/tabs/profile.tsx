@@ -1,146 +1,179 @@
-import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity, SafeAreaView, StatusBar } from 'react-native';
-import { Settings, Bell, Heart, Calendar, Trophy, Users, LogOut, ChevronRight } from 'lucide-react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, SafeAreaView, StatusBar, Alert } from 'react-native';
+import { Settings, Bell, Heart, Calendar, Trophy, Users, LogOut, ChevronRight, Check } from 'lucide-react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
+import UserAvatar from 'react-native-user-avatar';
+import { getUserProfile } from '../../src/api/user.api';
+
+//  Theme
+const THEME_ACCENT = '#CCF900'; 
+const THEME_BLACK = '#050505';
+const THEME_CARD = '#121212';
+const THEME_TEXT_SEC = '#737373';
+
+interface UserData {
+  _id: string;
+  name: string;
+  email: string;
+  avatar: string;
+}
 
 export default function ProfileScreen() {
+  const [user, setUser] = useState<UserData | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const userData = await getUserProfile();
+        setUser(userData);
+      } catch (error: any) {
+        if (error.response?.status === 401 || error.response?.status === 404) {
+          Alert.alert("Session Expired", "Please login again.");
+          await AsyncStorage.removeItem('token');
+          router.replace('/login');
+        } else {
+          Alert.alert('Error', 'Failed to load profile');
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
+  }, []);
+
   const handleLogout = () => {
     router.replace('/');
   };
 
   const stats = [
-    { label: 'Events Attended', value: '24', icon: Calendar, color: '#00ff88' },
-    { label: 'Clubs Joined', value: '5', icon: Users, color: '#00ffff' },
-    { label: 'Achievements', value: '12', icon: Trophy, color: '#ff0000' },
-  ];
-
-  const followedClubs = [
-    { name: 'DevClub', icon: '💻' },
-    { name: 'Dramatics', icon: '🎭' },
-    { name: 'Music Society', icon: '🎵' },
-    { name: 'Fine Arts', icon: '🎨' },
-    { name: 'Sports Committee', icon: '⚽' },
+    { label: 'Events', value: '24', icon: Calendar },
+    { label: 'Clubs', value: '5', icon: Users },
+    { label: 'Awards', value: '12', icon: Trophy },
   ];
 
   const upcomingEvents = [
-    { title: 'AI Workshop', date: 'Jan 25, 2026', club: 'ACM Chapter' },
-    { title: 'Drama Auditions', date: 'Jan 27, 2026', club: 'Dramatics' },
-    { title: 'Basketball Finals', date: 'Jan 30, 2026', club: 'Sports' },
+    { title: 'AI Workshop', date: 'Jan 25', club: 'ACM Chapter', time: '5:00 PM' },
+    { title: 'Drama Auditions', date: 'Jan 27', club: 'Dramatics', time: '6:30 PM' },
+    { title: 'Basketball Finals', date: 'Jan 30', club: 'Sports', time: '4:00 PM' },
   ];
 
-  const MenuItem = ({ icon: Icon, title, onPress, showBadge = false }) => (
+  const MenuItem = ({ icon: Icon, title, onPress, showBadge = false, isDestructive = false }) => (
     <TouchableOpacity 
-      className="flex-row items-center justify-between py-4 px-4 bg-cyber-green/5 border border-cyber-green/30 rounded-xl mb-3"
+      className="flex-row items-center justify-between py-4 px-5 bg-[#121212] border border-neutral-900 rounded-2xl mb-3"
       onPress={onPress}
     >
       <View className="flex-row items-center flex-1">
-        <Icon color="#00ff88" size={22} />
-        <Text className="text-white text-base ml-3 font-medium">{title}</Text>
+        <View className={`p-2 rounded-full ${isDestructive ? 'bg-red-500/10' : 'bg-[#CCF900]/10'}`}>
+           <Icon color={isDestructive ? '#ef4444' : THEME_ACCENT} size={20} strokeWidth={2.5} />
+        </View>
+        <Text className={`text-base ml-4 font-bold ${isDestructive ? 'text-red-500' : 'text-white'}`}>
+            {title}
+        </Text>
       </View>
       {showBadge && (
-        <View className="bg-cyber-red rounded-full w-5 h-5 items-center justify-center mr-2">
-          <Text className="text-white text-xs font-bold">3</Text>
+        <View className="bg-[#CCF900] rounded-full w-6 h-6 items-center justify-center mr-2">
+          <Text className="text-black text-[10px] font-black">3</Text>
         </View>
       )}
-      <ChevronRight color="#666" size={20} />
+      {!isDestructive && <ChevronRight color="#333" size={20} />}
     </TouchableOpacity>
   );
 
+  const displayName = user?.name || "Guest User";
+  const displayEmail = user?.email || "guest@example.com";
+  const avatarSeed = user?._id || user?.email || "default-seed";
+  const displayAvatar = `https://api.dicebear.com/9.x/bottts/png?seed=${avatarSeed}`;
+
   return (
-    <SafeAreaView className="flex-1 bg-black">
-      <StatusBar barStyle="light-content" backgroundColor="#000" />
+    <SafeAreaView className="flex-1 bg-[#050505]">
+      <StatusBar barStyle="light-content" backgroundColor="#050505" />
       
       {/* Header */}
-      <View className="px-5 py-4 border-b-2 border-cyber-green/30">
-        <View className="flex-row justify-between items-center">
-          <View>
-            <Text className="text-2xl font-black text-cyber-green tracking-widest mb-1">
-              PROFILE
-            </Text>
-            <Text className="text-cyber-cyan text-sm">
-              Your Dashboard
-            </Text>
-          </View>
-          <TouchableOpacity>
-            <Settings color="#00ff88" size={24} />
-          </TouchableOpacity>
+      <View className="px-6 py-4 flex-row justify-between items-start">
+        <View>
+          <Text className="text-neutral-500 font-bold text-xs tracking-[3px] uppercase mb-1">
+            Dashboard
+          </Text>
+          <Text className="text-white text-3xl font-black tracking-tight">
+            PROFILE.
+          </Text>
         </View>
+        <TouchableOpacity className="bg-[#1A1A1A] p-3 rounded-full border border-neutral-800">
+          <Settings color={THEME_ACCENT} size={20} />
+        </TouchableOpacity>
       </View>
 
-      <ScrollView className="flex-1 px-5" showsVerticalScrollIndicator={false}>
-        {/* User Card */}
-        <View className="bg-[#00140f]/60 border-2 border-cyber-green/30 rounded-2xl p-5 my-5">
-          <View className="items-center mb-4">
-            <View className="w-24 h-24 bg-cyber-green/20 border-4 border-cyber-green rounded-full items-center justify-center mb-3">
-              <Text className="text-4xl">👤</Text>
-            </View>
-            <Text className="text-white text-xl font-bold mb-1">John Doe</Text>
-            <Text className="text-cyber-cyan text-sm">john.doe@university.edu</Text>
-            <View className="flex-row items-center mt-2">
-              <View className="w-2 h-2 bg-cyber-green rounded-full mr-2" />
-              <Text className="text-cyber-green text-xs font-semibold">ACTIVE MEMBER</Text>
-            </View>
-          </View>
+      <ScrollView className="flex-1 px-6" showsVerticalScrollIndicator={false}>
+        
+        {/* Main Profile Card */}
+        <View className="bg-[#121212] border border-neutral-800 rounded-[32px] p-6 mb-6 items-center relative overflow-hidden">
+            {/* Background Decoration */}
+            <View className="absolute top-0 right-0 w-32 h-32 bg-[#CCF900]/5 rounded-bl-[100px]" />
 
-          {/* Stats */}
-          <View className="flex-row justify-between mt-4 pt-4 border-t border-cyber-green/30">
-            {stats.map((stat, idx) => {
-              const Icon = stat.icon;
-              return (
-                <View key={idx} className="items-center flex-1">
-                  <Icon color={stat.color} size={20} />
-                  <Text className="text-white text-2xl font-bold mt-2">{stat.value}</Text>
-                  <Text className="text-neutral-400 text-xs mt-1 text-center">{stat.label}</Text>
+            <View className="mb-4 p-1 border-2 border-[#CCF900] rounded-full border-dashed">
+               <UserAvatar 
+                 size={100} 
+                 name={displayName} 
+                 src={displayAvatar} 
+                 bgColor="#050505"
+               />
+            </View>
+
+            <Text className="text-white text-2xl font-black tracking-tight mb-1">{displayName}</Text>
+            <Text className="text-neutral-500 text-sm font-medium tracking-wide mb-4">{displayEmail}</Text>
+            
+            <View className="flex-row items-center bg-[#CCF900]/10 px-4 py-1.5 rounded-full border border-[#CCF900]/20">
+              <View className="w-1.5 h-1.5 bg-[#CCF900] rounded-full mr-2" />
+              <Text className="text-[#CCF900] text-[10px] font-black uppercase tracking-widest">Active Member</Text>
+            </View>
+        </View>
+
+        {/* Stats Row */}
+        <View className="flex-row justify-between mb-8">
+            {stats.map((stat, idx) => (
+                <View key={idx} className="w-[31%] bg-[#121212] border border-neutral-900 rounded-2xl p-3 items-center">
+                    <Text className="text-[#CCF900] text-xl font-black mb-1">{stat.value}</Text>
+                    <Text className="text-neutral-600 text-[10px] font-bold uppercase tracking-wider">{stat.label}</Text>
                 </View>
-              );
-            })}
-          </View>
+            ))}
         </View>
 
         {/* Quick Actions */}
-        <Text className="text-lg font-bold text-cyber-green mb-3">Quick Actions</Text>
+        <Text className="text-white text-lg font-black mb-4">ACTIONS</Text>
         <MenuItem icon={Bell} title="Notifications" showBadge={true} onPress={() => {}} />
         <MenuItem icon={Heart} title="Saved Events" onPress={() => {}} />
         <MenuItem icon={Calendar} title="My Calendar" onPress={() => {}} />
 
-        {/* Following */}
-        <Text className="text-lg font-bold text-cyber-green mb-3 mt-5">Following ({followedClubs.length})</Text>
-        <View className="flex-row flex-wrap mb-5">
-          {followedClubs.map((club, idx) => (
-            <View key={idx} className="bg-cyber-green/10 border border-cyber-green/30 rounded-full px-4 py-2 mr-2 mb-2 flex-row items-center">
-              <Text className="mr-2">{club.icon}</Text>
-              <Text className="text-cyber-green text-sm font-medium">{club.name}</Text>
-            </View>
-          ))}
+        {/* Upcoming Events Mini-List */}
+        <View className="flex-row justify-between items-end mb-4 mt-6">
+            <Text className="text-white text-lg font-black">UPCOMING</Text>
+            <TouchableOpacity>
+                <Text className="text-[#CCF900] text-xs font-bold uppercase">View All</Text>
+            </TouchableOpacity>
         </View>
-
-        {/* Upcoming Events */}
-        <Text className="text-lg font-bold text-cyber-green mb-3">Your Upcoming Events</Text>
+        
         {upcomingEvents.map((event, idx) => (
-          <View key={idx} className="bg-[#00140f]/60 border border-cyber-green/30 rounded-xl p-4 mb-3">
-            <View className="flex-row justify-between items-start">
-              <View className="flex-1">
-                <Text className="text-white text-base font-bold mb-1">{event.title}</Text>
-                <Text className="text-cyber-cyan text-xs mb-1">{event.club}</Text>
-                <Text className="text-neutral-400 text-xs">📅 {event.date}</Text>
-              </View>
-              <TouchableOpacity className="bg-cyber-green/20 border border-cyber-green px-3 py-1 rounded-full">
-                <Text className="text-cyber-green text-xs font-semibold">Details</Text>
-              </TouchableOpacity>
-            </View>
+          <View key={idx} className="bg-[#121212] border border-neutral-900 rounded-2xl p-4 mb-3 flex-row items-center">
+             <View className="bg-[#1A1A1A] w-12 h-12 rounded-xl items-center justify-center mr-4">
+                <Text className="text-[#CCF900] font-black text-xs">{event.date.split(' ')[0]}</Text>
+                <Text className="text-white font-bold text-sm">{event.date.split(' ')[1]}</Text>
+             </View>
+             <View className="flex-1">
+                <Text className="text-white font-bold text-base">{event.title}</Text>
+                <Text className="text-neutral-500 text-xs">{event.club} • {event.time}</Text>
+             </View>
+             <ChevronRight color="#333" size={16} />
           </View>
         ))}
 
         {/* Logout */}
-        <TouchableOpacity 
-          className="flex-row items-center justify-center py-4 px-4 bg-cyber-red/20 border-2 border-cyber-red/50 rounded-xl my-5"
-          onPress={handleLogout}
-        >
-          <LogOut color="#ff0000" size={20} />
-          <Text className="text-cyber-red text-base ml-3 font-bold">LOGOUT</Text>
-        </TouchableOpacity>
+        <View className="mt-6 mb-10">
+            <MenuItem icon={LogOut} title="Logout" isDestructive={true} onPress={handleLogout} />
+        </View>
 
-        <View className="h-10" />
       </ScrollView>
     </SafeAreaView>
   );

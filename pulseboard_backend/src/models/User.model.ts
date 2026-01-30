@@ -8,7 +8,8 @@ export interface IUser extends Document {
   password?: string;
   year?: number;
   branch?: string;
-  following: number[]; 
+  following: number[];
+  avatar?: string;
 }
 
 const UserSchema: Schema = new Schema(
@@ -49,6 +50,10 @@ const UserSchema: Schema = new Schema(
     following: {
       type: [Number],
       default: [],
+    },
+    avatar: {
+      type: String,
+      default: ''
     },
   },
   { timestamps: true }
