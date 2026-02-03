@@ -17,6 +17,7 @@ import { router } from 'expo-router';
 import { Eye, EyeOff, ChevronLeft, User, Mail, Lock, Zap } from 'lucide-react-native';
 import { registerUser } from '../../src/services/auth.service';
 import { LinearGradient } from 'expo-linear-gradient';
+import { widthPercentageToDP as wp, heightPercentageToDP as hp } from 'react-native-responsive-screen';
 
 // --- Theme Constants ---
 const LN_VOLT = '#CCF900'; 
@@ -40,25 +41,21 @@ export default function RegisterScreen() {
   const [loading, setLoading] = useState(false);
 
   const handleRegister = async () => {
-    // 1. Check for empty fields
     if (!name || !email || !password || !confirmPassword) {
       Alert.alert('Missing Fields', 'All fields are required!');
       return;
     }
 
-    // 2. Domain Validation
     if (!email.endsWith('@iitj.ac.in')) {
       Alert.alert('Restricted Access', 'Only emails ending in @iitj.ac.in are allowed.');
       return;
     }
 
-    // 3. Length Validation
     if (password.length < 8) {
       Alert.alert('Weak Password', 'Password must be at least 8 characters long.');
       return;
     }
 
-    // 4. Match Validation
     if (password !== confirmPassword) {
       Alert.alert('Mismatch', 'Passwords do not match.');
       return;
@@ -69,7 +66,6 @@ export default function RegisterScreen() {
       await registerUser({ name, email, password });
       
       Alert.alert('Success', 'Account created successfully');
-      // Redirect to login after successful registration
       router.push('/auth/login');
     } catch (err: any) {
       const status = err?.response?.status;
@@ -99,7 +95,7 @@ export default function RegisterScreen() {
     <View className="flex-1 bg-[#050505]">
       <StatusBar barStyle="light-content" backgroundColor="#050505" />
 
-      {/* LAYER 1: The Image (Lion) */}
+      {/* LAYER 1: The Image */}
       <ImageBackground 
         source={BG_IMAGE} 
         className="flex-1"
@@ -117,53 +113,76 @@ export default function RegisterScreen() {
         <SafeAreaView className="flex-1">
           <KeyboardAvoidingView 
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-            className="flex-1 px-6"
+            className="flex-1"
+            style={{ paddingHorizontal: wp('6%') }}
           >
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 20 }}>
+            <ScrollView 
+                showsVerticalScrollIndicator={false} 
+                contentContainerStyle={{ paddingBottom: hp('5%') }}
+            >
               
               {/* --- Header Section --- */}
-              <View className="mt-4 mb-8">
+              <View style={{ marginTop: hp('2%'), marginBottom: hp('3%') }}>
                 <TouchableOpacity 
                   onPress={() => router.back()} 
-                  className="w-12 h-12 bg-[#121212]/80 border border-neutral-800 rounded-full justify-center items-center mb-6"
+                  className="bg-[#121212]/80 border border-neutral-800 rounded-full justify-center items-center"
+                  style={{ 
+                      width: wp('12%'), 
+                      height: wp('12%'), 
+                      marginBottom: hp('3%') 
+                  }}
                 >
-                  <ChevronLeft color="white" size={24} />
+                  <ChevronLeft color="white" size={wp('6%')} />
                 </TouchableOpacity>
 
                 <View>
                   <View className="flex-row items-center space-x-2 mb-2">
-                    <View className="w-2 h-2 bg-[#CCF900] rounded-full animate-pulse" />
-                    <Text className="text-[#CCF900] font-mono text-[10px] tracking-[3px] uppercase">
+                    <View className="rounded-full animate-pulse" style={{ width: wp('2%'), height: wp('2%'), backgroundColor: '#CCF900' }} />
+                    <Text 
+                        className="text-[#CCF900] font-mono uppercase"
+                        style={{ fontSize: hp('1.2%'), letterSpacing: 3 }}
+                    >
                       New Entry
                     </Text>
                   </View>
 
-                  <Text className="text-white text-5xl font-black italic tracking-tighter uppercase leading-[0.9] mb-4">
+                  <Text 
+                    className="text-white font-black italic tracking-tighter uppercase"
+                    style={{ fontSize: hp('5.5%'), lineHeight: hp('5.5%'), marginBottom: hp('2%') }}
+                  >
                     Create<Text className="text-[#CCF900]">.</Text>{"\n"}Account
                   </Text>
                   
-                  <Text className="text-neutral-400 text-sm font-medium leading-5 max-w-[90%]">
+                  <Text 
+                    className="text-neutral-400 font-medium"
+                    style={{ fontSize: hp('1.6%'), lineHeight: hp('2.2%'), maxWidth: wp('90%') }}
+                  >
                     Join the PulseBoard network. Exclusive to IIT Jodhpur students.
                   </Text>
                 </View>
               </View>
 
               {/* --- Form Section --- */}
-              <View className="space-y-5">
+              <View style={{ gap: hp('2.5%') }}>
                 
                 {/* Name Input */}
                 <View>
-                  <Text className="text-neutral-500 text-[10px] font-bold tracking-widest uppercase mb-2 ml-1">
+                  <Text 
+                    className="text-neutral-500 font-bold uppercase"
+                    style={{ fontSize: hp('1.1%'), letterSpacing: 2, marginBottom: hp('1%'), marginLeft: wp('1%') }}
+                  >
                     Full Name
                   </Text>
                   <View 
-                    className={`h-16 bg-[#121212]/90 rounded-xl border flex-row items-center px-4 ${
+                    className={`bg-[#121212]/90 rounded-xl border flex-row items-center px-4 ${
                       focusedInput === 'name' ? 'border-[#CCF900]' : 'border-neutral-800'
                     }`}
+                    style={{ height: hp('7.5%') }}
                   >
-                    <User color={focusedInput === 'name' ? LN_VOLT : '#555'} size={20} className="mr-3" />
+                    <User color={focusedInput === 'name' ? LN_VOLT : '#555'} size={hp('2.5%')} style={{ marginRight: wp('3%') }} />
                     <TextInput
-                      className="flex-1 text-base text-white font-bold h-full"
+                      className="flex-1 text-white font-bold h-full"
+                      style={{ fontSize: hp('1.8%') }}
                       placeholder="John Doe"
                       placeholderTextColor="#444"
                       value={name}
@@ -177,17 +196,22 @@ export default function RegisterScreen() {
 
                 {/* Email Input */}
                 <View>
-                  <Text className="text-neutral-500 text-[10px] font-bold tracking-widest uppercase mb-2 ml-1">
+                  <Text 
+                    className="text-neutral-500 font-bold uppercase"
+                    style={{ fontSize: hp('1.1%'), letterSpacing: 2, marginBottom: hp('1%'), marginLeft: wp('1%') }}
+                  >
                     Institute Email
                   </Text>
                   <View 
-                    className={`h-16 bg-[#121212]/90 rounded-xl border flex-row items-center px-4 ${
+                    className={`bg-[#121212]/90 rounded-xl border flex-row items-center px-4 ${
                       focusedInput === 'email' ? 'border-[#CCF900]' : 'border-neutral-800'
                     }`}
+                    style={{ height: hp('7.5%') }}
                   >
-                    <Mail color={focusedInput === 'email' ? LN_VOLT : '#555'} size={20} className="mr-3" />
+                    <Mail color={focusedInput === 'email' ? LN_VOLT : '#555'} size={hp('2.5%')} style={{ marginRight: wp('3%') }} />
                     <TextInput
-                      className="flex-1 text-base text-white font-bold h-full"
+                      className="flex-1 text-white font-bold h-full"
+                      style={{ fontSize: hp('1.8%') }}
                       placeholder="student@iitj.ac.in"
                       placeholderTextColor="#444"
                       keyboardType="email-address"
@@ -203,17 +227,22 @@ export default function RegisterScreen() {
 
                 {/* Password Input */}
                 <View>
-                  <Text className="text-neutral-500 text-[10px] font-bold tracking-widest uppercase mb-2 ml-1">
+                  <Text 
+                    className="text-neutral-500 font-bold uppercase"
+                    style={{ fontSize: hp('1.1%'), letterSpacing: 2, marginBottom: hp('1%'), marginLeft: wp('1%') }}
+                  >
                     Set Password
                   </Text>
                   <View 
-                    className={`h-16 bg-[#121212]/90 rounded-xl border flex-row items-center px-4 ${
+                    className={`bg-[#121212]/90 rounded-xl border flex-row items-center px-4 ${
                       focusedInput === 'password' ? 'border-[#CCF900]' : 'border-neutral-800'
                     }`}
+                    style={{ height: hp('7.5%') }}
                   >
-                    <Lock color={focusedInput === 'password' ? LN_VOLT : '#555'} size={20} className="mr-3" />
+                    <Lock color={focusedInput === 'password' ? LN_VOLT : '#555'} size={hp('2.5%')} style={{ marginRight: wp('3%') }} />
                     <TextInput
-                      className="flex-1 text-base text-white font-bold h-full"
+                      className="flex-1 text-white font-bold h-full"
+                      style={{ fontSize: hp('1.8%') }}
                       placeholder="Min 8 chars"
                       placeholderTextColor="#444"
                       secureTextEntry={!showPassword}
@@ -223,25 +252,30 @@ export default function RegisterScreen() {
                       onFocus={() => setFocusedInput('password')}
                       onBlur={() => setFocusedInput(null)}
                     />
-                    <TouchableOpacity onPress={() => setShowPassword(!showPassword)} className="p-2">
-                      {showPassword ? <EyeOff color="#555" size={20} /> : <Eye color="#555" size={20} />}
+                    <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={{ padding: wp('2%') }}>
+                      {showPassword ? <EyeOff color="#555" size={hp('2.5%')} /> : <Eye color="#555" size={hp('2.5%')} />}
                     </TouchableOpacity>
                   </View>
                 </View>
 
                 {/* Confirm Password Input */}
                 <View>
-                  <Text className="text-neutral-500 text-[10px] font-bold tracking-widest uppercase mb-2 ml-1">
+                  <Text 
+                    className="text-neutral-500 font-bold uppercase"
+                    style={{ fontSize: hp('1.1%'), letterSpacing: 2, marginBottom: hp('1%'), marginLeft: wp('1%') }}
+                  >
                     Confirm Password
                   </Text>
                   <View 
-                    className={`h-16 bg-[#121212]/90 rounded-xl border flex-row items-center px-4 ${
+                    className={`bg-[#121212]/90 rounded-xl border flex-row items-center px-4 ${
                       focusedInput === 'confirm' ? 'border-[#CCF900]' : 'border-neutral-800'
                     }`}
+                    style={{ height: hp('7.5%') }}
                   >
-                    <Lock color={focusedInput === 'confirm' ? LN_VOLT : '#555'} size={20} className="mr-3" />
+                    <Lock color={focusedInput === 'confirm' ? LN_VOLT : '#555'} size={hp('2.5%')} style={{ marginRight: wp('3%') }} />
                     <TextInput
-                      className="flex-1 text-base text-white font-bold h-full"
+                      className="flex-1 text-white font-bold h-full"
+                      style={{ fontSize: hp('1.8%') }}
                       placeholder="Repeat Password"
                       placeholderTextColor="#444"
                       secureTextEntry={!showConfirmPassword}
@@ -251,19 +285,24 @@ export default function RegisterScreen() {
                       onFocus={() => setFocusedInput('confirm')}
                       onBlur={() => setFocusedInput(null)}
                     />
-                    <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)} className="p-2">
-                      {showConfirmPassword ? <EyeOff color="#555" size={20} /> : <Eye color="#555" size={20} />}
+                    <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)} style={{ padding: wp('2%') }}>
+                      {showConfirmPassword ? <EyeOff color="#555" size={hp('2.5%')} /> : <Eye color="#555" size={hp('2.5%')} />}
                     </TouchableOpacity>
                   </View>
                 </View>
 
                 {/* Register Button */}
                 <TouchableOpacity
-                  className={`h-16 bg-[#CCF900] justify-center items-center mt-6 group ${loading ? 'opacity-70' : ''}`}
+                  className={`bg-[#CCF900] justify-center items-center group ${loading ? 'opacity-70' : ''}`}
                   onPress={handleRegister}
                   disabled={loading}
                   activeOpacity={0.9}
-                  style={{ transform: [{ skewX: '-12deg' }], borderRadius: 4 }}
+                  style={{ 
+                    height: hp('7.5%'), 
+                    marginTop: hp('2%'),
+                    transform: [{ skewX: '-12deg' }], 
+                    borderRadius: 4 
+                }}
                 >
                   {loading ? (
                     <View style={{ transform: [{ skewX: '12deg' }] }}>
@@ -271,22 +310,31 @@ export default function RegisterScreen() {
                     </View>
                   ) : (
                     <View className="flex-row items-center" style={{ transform: [{ skewX: '12deg' }] }}>
-                      <Text className="text-black text-lg font-black uppercase tracking-widest mr-2">
+                      <Text 
+                        className="text-black font-black uppercase mr-2"
+                        style={{ fontSize: hp('2%'), letterSpacing: 2 }}
+                      >
                         REGISTER SYSTEM
                       </Text>
-                      <Zap color="black" size={20} fill="black" />
+                      <Zap color="black" size={hp('2.5%')} fill="black" />
                     </View>
                   )}
                 </TouchableOpacity>
 
                 {/* Footer */}
-                <View className="py-4 items-center">
+                <View style={{ paddingVertical: hp('2%'), alignItems: 'center' }}>
                   <View className="flex-row items-center">
-                    <Text className="text-neutral-400 text-xs font-medium mr-2">
+                    <Text 
+                        className="text-neutral-400 font-medium mr-2"
+                        style={{ fontSize: hp('1.4%') }}
+                    >
                       Already have an account?
                     </Text>
                     <TouchableOpacity onPress={() => router.push('/auth/login')}>
-                      <Text className="text-white font-black text-xs uppercase tracking-wider border-b border-[#CCF900]">
+                      <Text 
+                        className="text-white font-black uppercase border-b border-[#CCF900]"
+                        style={{ fontSize: hp('1.4%'), letterSpacing: 1 }}
+                      >
                         LOGIN
                       </Text>
                     </TouchableOpacity>

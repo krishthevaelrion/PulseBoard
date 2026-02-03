@@ -1,16 +1,14 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, SafeAreaView, StatusBar, Alert } from 'react-native';
-import { Settings, Bell, Heart, Calendar, Trophy, Users, LogOut, ChevronRight, Check } from 'lucide-react-native';
+import { View, Text, ScrollView, TouchableOpacity, SafeAreaView, StatusBar, Alert, ActivityIndicator } from 'react-native';
+import { Settings, Bell, Heart, Calendar, Trophy, Users, LogOut, ChevronRight } from 'lucide-react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
 import UserAvatar from 'react-native-user-avatar';
 import { getUserProfile } from '../../src/api/user.api';
+import { widthPercentageToDP as wp, heightPercentageToDP as hp } from 'react-native-responsive-screen';
 
 //  Theme
 const THEME_ACCENT = '#CCF900'; 
-const THEME_BLACK = '#050505';
-const THEME_CARD = '#121212';
-const THEME_TEXT_SEC = '#737373';
 
 interface UserData {
   _id: string;
@@ -60,25 +58,53 @@ export default function ProfileScreen() {
     { title: 'Basketball Finals', date: 'Jan 30', club: 'Sports', time: '4:00 PM' },
   ];
 
-  const MenuItem = ({ icon: Icon, title, onPress, showBadge = false, isDestructive = false }) => (
+  const MenuItem = ({ icon: Icon, title, onPress, showBadge = false, isDestructive = false }: any) => (
     <TouchableOpacity 
-      className="flex-row items-center justify-between py-4 px-5 bg-[#121212] border border-neutral-900 rounded-2xl mb-3"
+      style={{ 
+        flexDirection: 'row', 
+        alignItems: 'center', 
+        justifyContent: 'space-between', 
+        paddingVertical: hp('2%'), 
+        paddingHorizontal: wp('%'), 
+        backgroundColor: '#121212', 
+        borderWidth: 1, 
+        borderColor: '#171717', 
+        borderRadius: 16, 
+        marginBottom: hp('1.5%') 
+      }}
       onPress={onPress}
     >
-      <View className="flex-row items-center flex-1">
-        <View className={`p-2 rounded-full ${isDestructive ? 'bg-red-500/10' : 'bg-[#CCF900]/10'}`}>
-           <Icon color={isDestructive ? '#ef4444' : THEME_ACCENT} size={20} strokeWidth={2.5} />
+      <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+        <View style={{ 
+            padding: wp('2%'), 
+            borderRadius: 999, 
+            backgroundColor: isDestructive ? 'rgba(239, 68, 68, 0.1)' : 'rgba(204, 249, 0, 0.1)' 
+        }}>
+           <Icon color={isDestructive ? '#ef4444' : THEME_ACCENT} size={hp('2.5%')} strokeWidth={2.5} />
         </View>
-        <Text className={`text-base ml-4 font-bold ${isDestructive ? 'text-red-500' : 'text-white'}`}>
+        <Text style={{ 
+            fontSize: hp('1.8%'), 
+            fontWeight: 'bold', 
+            marginLeft: wp('4%'), 
+            color: isDestructive ? '#ef4444' : 'white' 
+        }}>
             {title}
         </Text>
       </View>
       {showBadge && (
-        <View className="bg-[#CCF900] rounded-full w-6 h-6 items-center justify-center mr-2">
-          <Text className="text-black text-[10px] font-black">3</Text>
+        <View style={{ 
+            backgroundColor: '#CCF900', 
+            borderRadius: 999, 
+            width: hp('3%'), 
+            height: hp('3%'), 
+            alignItems: 'center', 
+            justifyContent: 'center', 
+            marginRight: wp('2%') 
+        }}>
+          <Text style={{ color: 'black', fontSize: hp('1.2%'), fontWeight: '900' }}>3</Text>
         </View>
       )}
-      {!isDestructive && <ChevronRight color="#333" size={20} />}
+      {!isDestructive && <ChevronRight color="#333" size={hp('2.5%')} />}
     </TouchableOpacity>
   );
 
@@ -87,90 +113,177 @@ export default function ProfileScreen() {
   const avatarSeed = user?._id || user?.email || "default-seed";
   const displayAvatar = `https://api.dicebear.com/9.x/bottts/png?seed=${avatarSeed}`;
 
+  if (loading) {
+      return (
+        <View className="flex-1 bg-[#050505] justify-center items-center">
+          <ActivityIndicator size="large" color={THEME_ACCENT} />
+        </View>
+      );
+  }
+
   return (
     <SafeAreaView className="flex-1 bg-[#050505]">
       <StatusBar barStyle="light-content" backgroundColor="#050505" />
       
       {/* Header */}
-      <View className="px-6 py-4 flex-row justify-between items-start">
+      <View style={{ 
+          paddingHorizontal: wp('7%'), 
+          paddingVertical: hp('3.5%'), 
+          flexDirection: 'row', 
+          justifyContent: 'space-between', 
+          alignItems: 'flex-start' 
+      }}>
         <View>
-          <Text className="text-neutral-500 font-bold text-xs tracking-[3px] uppercase mb-1">
+          <Text style={{ 
+              color: '#737373', 
+              fontWeight: 'bold', 
+              fontSize: hp('1.5%'), 
+              letterSpacing: 3, 
+              textTransform: 'uppercase', 
+              marginBottom: hp('0.5%') 
+          }}>
             Dashboard
           </Text>
-          <Text className="text-white text-3xl font-black tracking-tight">
-            PROFILE.
+          <Text style={{ color: 'white', fontSize: hp('4%'), fontWeight: '900', letterSpacing: -1 }}>
+            PROFILE
           </Text>
         </View>
-        <TouchableOpacity className="bg-[#1A1A1A] p-3 rounded-full border border-neutral-800">
-          <Settings color={THEME_ACCENT} size={20} />
+        <TouchableOpacity style={{ 
+            backgroundColor: '#1A1A1A', 
+            padding: wp('3%'), 
+            borderRadius: 999, 
+            borderWidth: 1, 
+            borderColor: '#262626',
+            marginTop: hp('1.4%')
+        }}>
+          <Settings color={THEME_ACCENT} size={hp('2.5%')} />
         </TouchableOpacity>
       </View>
 
-      <ScrollView className="flex-1 px-6" showsVerticalScrollIndicator={false}>
+      <ScrollView className="flex-1" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: wp('6%'), paddingBottom: hp('5%') }}>
         
         {/* Main Profile Card */}
-        <View className="bg-[#121212] border border-neutral-800 rounded-[32px] p-6 mb-6 items-center relative overflow-hidden">
+        <View style={{ 
+            backgroundColor: '#121212', 
+            borderWidth: 1, 
+            borderColor: '#262626', 
+            borderRadius: 32, 
+            padding: wp('6%'), 
+            marginBottom: hp('3%'), 
+            alignItems: 'center', 
+            overflow: 'hidden',
+            position: 'relative'
+        }}>
             {/* Background Decoration */}
-            <View className="absolute top-0 right-0 w-32 h-32 bg-[#CCF900]/5 rounded-bl-[100px]" />
+            <View style={{ 
+                position: 'absolute', 
+                top: 0, 
+                right: 0, 
+                width: wp('30%'), 
+                height: wp('30%'), 
+                backgroundColor: 'rgba(204, 249, 0, 0.05)', 
+                borderBottomLeftRadius: 100 
+            }} />
 
-            <View className="mb-4 p-1 border-2 border-[#CCF900] rounded-full border-dashed">
+            <View style={{ 
+                marginBottom: hp('2%'), 
+                padding: 4, 
+                borderWidth: 2, 
+                borderColor: '#CCF900', 
+                borderRadius: 999, 
+                borderStyle: 'dashed' 
+            }}>
                <UserAvatar 
-                 size={100} 
+                 size={hp('12%')} 
                  name={displayName} 
                  src={displayAvatar} 
                  bgColor="#050505"
                />
             </View>
 
-            <Text className="text-white text-2xl font-black tracking-tight mb-1">{displayName}</Text>
-            <Text className="text-neutral-500 text-sm font-medium tracking-wide mb-4">{displayEmail}</Text>
+            <Text style={{ color: 'white', fontSize: hp('2.8%'), fontWeight: '900', marginBottom: hp('0.5%') }}>{displayName}</Text>
+            <Text style={{ color: '#737373', fontSize: hp('1.6%'), fontWeight: '500', marginBottom: hp('2%') }}>{displayEmail}</Text>
             
-            <View className="flex-row items-center bg-[#CCF900]/10 px-4 py-1.5 rounded-full border border-[#CCF900]/20">
-              <View className="w-1.5 h-1.5 bg-[#CCF900] rounded-full mr-2" />
-              <Text className="text-[#CCF900] text-[10px] font-black uppercase tracking-widest">Active Member</Text>
+            <View style={{ 
+                flexDirection: 'row', 
+                alignItems: 'center', 
+                backgroundColor: 'rgba(204, 249, 0, 0.1)', 
+                paddingHorizontal: wp('4%'), 
+                paddingVertical: hp('0.8%'), 
+                borderRadius: 999, 
+                borderWidth: 1, 
+                borderColor: 'rgba(204, 249, 0, 0.2)' 
+            }}>
+              <View style={{ width: 6, height: 6, backgroundColor: '#CCF900', borderRadius: 999, marginRight: 8 }} />
+              <Text style={{ color: '#CCF900', fontSize: hp('1.2%'), fontWeight: '900', textTransform: 'uppercase', letterSpacing: 2 }}>Active Member</Text>
             </View>
         </View>
 
         {/* Stats Row */}
-        <View className="flex-row justify-between mb-8">
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: hp('4%') }}>
             {stats.map((stat, idx) => (
-                <View key={idx} className="w-[31%] bg-[#121212] border border-neutral-900 rounded-2xl p-3 items-center">
-                    <Text className="text-[#CCF900] text-xl font-black mb-1">{stat.value}</Text>
-                    <Text className="text-neutral-600 text-[10px] font-bold uppercase tracking-wider">{stat.label}</Text>
+                <View key={idx} style={{ 
+                    width: '31%', 
+                    backgroundColor: '#121212', 
+                    borderWidth: 1, 
+                    borderColor: '#171717', 
+                    borderRadius: 16, 
+                    padding: wp('3%'), 
+                    alignItems: 'center' 
+                }}>
+                    <Text style={{ color: '#CCF900', fontSize: hp('2.5%'), fontWeight: '900', marginBottom: hp('0.5%') }}>{stat.value}</Text>
+                    <Text style={{ color: '#52525B', fontSize: hp('1.1%'), fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: 1 }}>{stat.label}</Text>
                 </View>
             ))}
         </View>
 
         {/* Quick Actions */}
-        <Text className="text-white text-lg font-black mb-4">ACTIONS</Text>
+        <Text style={{ color: 'white', fontSize: hp('2.2%'), fontWeight: '900', marginBottom: hp('2%') }}>ACTIONS</Text>
         <MenuItem icon={Bell} title="Notifications" showBadge={true} onPress={() => {}} />
         <MenuItem icon={Heart} title="Saved Events" onPress={() => {}} />
         <MenuItem icon={Calendar} title="My Calendar" onPress={() => {}} />
 
         {/* Upcoming Events Mini-List */}
-        <View className="flex-row justify-between items-end mb-4 mt-6">
-            <Text className="text-white text-lg font-black">UPCOMING</Text>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: hp('2%'), marginTop: hp('3%') }}>
+            <Text style={{ color: 'white', fontSize: hp('2.2%'), fontWeight: '900' }}>UPCOMING</Text>
             <TouchableOpacity>
-                <Text className="text-[#CCF900] text-xs font-bold uppercase">View All</Text>
+                <Text style={{ color: '#CCF900', fontSize: hp('1.4%'), fontWeight: 'bold', textTransform: 'uppercase' }}>View All</Text>
             </TouchableOpacity>
         </View>
         
         {upcomingEvents.map((event, idx) => (
-          <View key={idx} className="bg-[#121212] border border-neutral-900 rounded-2xl p-4 mb-3 flex-row items-center">
-             <View className="bg-[#1A1A1A] w-12 h-12 rounded-xl items-center justify-center mr-4">
-                <Text className="text-[#CCF900] font-black text-xs">{event.date.split(' ')[0]}</Text>
-                <Text className="text-white font-bold text-sm">{event.date.split(' ')[1]}</Text>
+          <View key={idx} style={{ 
+              backgroundColor: '#121212', 
+              borderWidth: 1, 
+              borderColor: '#171717', 
+              borderRadius: 16, 
+              padding: wp('4%'), 
+              marginBottom: hp('1.5%'), 
+              flexDirection: 'row', 
+              alignItems: 'center' 
+          }}>
+             <View style={{ 
+                 backgroundColor: '#1A1A1A', 
+                 width: wp('12%'), 
+                 height: wp('12%'), 
+                 borderRadius: 12, 
+                 alignItems: 'center', 
+                 justifyContent: 'center', 
+                 marginRight: wp('4%') 
+             }}>
+                <Text style={{ color: '#CCF900', fontWeight: '900', fontSize: hp('1.4%') }}>{event.date.split(' ')[0]}</Text>
+                <Text style={{ color: 'white', fontWeight: 'bold', fontSize: hp('1.6%') }}>{event.date.split(' ')[1]}</Text>
              </View>
-             <View className="flex-1">
-                <Text className="text-white font-bold text-base">{event.title}</Text>
-                <Text className="text-neutral-500 text-xs">{event.club} • {event.time}</Text>
+             <View style={{ flex: 1 }}>
+                <Text style={{ color: 'white', fontWeight: 'bold', fontSize: hp('1.8%') }}>{event.title}</Text>
+                <Text style={{ color: '#737373', fontSize: hp('1.4%') }}>{event.club} • {event.time}</Text>
              </View>
-             <ChevronRight color="#333" size={16} />
+             <ChevronRight color="#333" size={hp('2%')} />
           </View>
         ))}
 
         {/* Logout */}
-        <View className="mt-6 mb-10">
+        <View style={{ marginTop: hp('3%'), marginBottom: hp('5%') }}>
             <MenuItem icon={LogOut} title="Logout" isDestructive={true} onPress={handleLogout} />
         </View>
 

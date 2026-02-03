@@ -17,6 +17,7 @@ import { Eye, EyeOff, ChevronLeft, Mail, Lock, Zap } from 'lucide-react-native';
 import { loginUser } from '../../src/services/auth.service';
 import { LinearGradient } from 'expo-linear-gradient'; 
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { widthPercentageToDP as wp, heightPercentageToDP as hp } from 'react-native-responsive-screen';
 
 // --- Theme Constants ---
 const LN_VOLT = '#CCF900'; 
@@ -39,10 +40,8 @@ export default function LoginScreen() {
   
     setLoading(true);
     try {
-      // 1. Attempt Login
       const response = await loginUser({ email, password });
       
-      // 2. Save Token (CRITICAL for Home Screen to work)
       if (response.token) {
         await AsyncStorage.setItem('token', response.token);
         router.replace('/tabs/home');
@@ -52,8 +51,6 @@ export default function LoginScreen() {
 
     } catch (error: any) {
       console.log("Login Error Full:", error);
-      
-      // Handle Network Errors specifically
       if (error.message === 'Network Error') {
         Alert.alert(
           'Connection Failed', 
@@ -90,51 +87,71 @@ export default function LoginScreen() {
         <SafeAreaView className="flex-1">
           <KeyboardAvoidingView 
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-            className="flex-1 px-6 justify-between"
+            className="flex-1 justify-between"
+            style={{ paddingHorizontal: wp('6%') }} // Responsive side padding
           >
             {/* --- Header Section --- */}
-            <View className="mt-4">
+            <View style={{ marginTop: hp('2%') }}>
               <TouchableOpacity 
                 onPress={() => router.back()} 
-                className="w-12 h-12 bg-[#121212]/80 border border-neutral-800 rounded-full justify-center items-center mb-8"
+                className="bg-[#121212]/80 border border-neutral-800 rounded-full justify-center items-center"
+                style={{ 
+                    width: wp('12%'), 
+                    height: wp('12%'), 
+                    marginBottom: hp('4%') 
+                }}
               >
-                <ChevronLeft color="white" size={24} />
+                <ChevronLeft color="white" size={wp('6%')} />
               </TouchableOpacity>
 
               <View>
                 <View className="flex-row items-center space-x-2 mb-2">
-                  <View className="w-2 h-2 bg-[#CCF900] rounded-full animate-pulse" />
-                  <Text className="text-[#CCF900] font-mono text-[10px] tracking-[3px] uppercase">
+                  <View className="rounded-full animate-pulse" style={{ width: wp('2%'), height: wp('2%'), backgroundColor: '#CCF900' }} />
+                  <Text 
+                    className="text-[#CCF900] font-mono uppercase"
+                    style={{ fontSize: hp('1.2%'), letterSpacing: 3 }}
+                  >
                     Secure Access
                   </Text>
                 </View>
 
-                <Text className="text-white text-5xl font-black italic tracking-tighter uppercase leading-[0.9] mb-4">
+                <Text 
+                    className="text-white font-black italic tracking-tighter uppercase"
+                    style={{ fontSize: hp('5.5%'), lineHeight: hp('5.5%'), marginBottom: hp('2%') }}
+                >
                   System<Text className="text-[#CCF900]">.</Text>{"\n"}Login
                 </Text>
                 
-                <Text className="text-neutral-400 text-sm font-medium leading-5 max-w-[80%]">
+                <Text 
+                    className="text-neutral-400 font-medium"
+                    style={{ fontSize: hp('1.6%'), lineHeight: hp('2.2%'), maxWidth: wp('80%') }}
+                >
                   Enter your credentials to sync with the campus network.
                 </Text>
               </View>
             </View>
 
             {/* --- Form Section --- */}
-            <View className="space-y-6 mt-4">
+            <View style={{ marginTop: hp('2%'), gap: hp('3%') }}>
               
               {/* Email Input */}
               <View>
-                <Text className="text-neutral-500 text-[10px] font-bold tracking-widest uppercase mb-2 ml-1">
+                <Text 
+                    className="text-neutral-500 font-bold uppercase"
+                    style={{ fontSize: hp('1.1%'), letterSpacing: 2, marginBottom: hp('1%'), marginLeft: wp('1%') }}
+                >
                   Identifier // Email
                 </Text>
                 <View 
-                  className={`h-16 bg-[#121212]/90 rounded-xl border flex-row items-center px-4 ${
+                  className={`bg-[#121212]/90 rounded-xl border flex-row items-center px-4 ${
                     focusedInput === 'email' ? 'border-[#CCF900]' : 'border-neutral-800'
                   }`}
+                  style={{ height: hp('7.5%') }} // Responsive input height
                 >
-                  <Mail color={focusedInput === 'email' ? LN_VOLT : '#555'} size={20} className="mr-3" />
+                  <Mail color={focusedInput === 'email' ? LN_VOLT : '#555'} size={hp('2.5%')} style={{ marginRight: wp('3%') }} />
                   <TextInput
-                    className="flex-1 text-base text-white font-bold h-full"
+                    className="flex-1 text-white font-bold h-full"
+                    style={{ fontSize: hp('1.8%') }}
                     placeholder="user@iitj.ac.in"
                     placeholderTextColor="#444"
                     keyboardType="email-address"
@@ -150,17 +167,22 @@ export default function LoginScreen() {
 
               {/* Password Input */}
               <View>
-                <Text className="text-neutral-500 text-[10px] font-bold tracking-widest uppercase mb-2 ml-1">
+                <Text 
+                    className="text-neutral-500 font-bold uppercase"
+                    style={{ fontSize: hp('1.1%'), letterSpacing: 2, marginBottom: hp('1%'), marginLeft: wp('1%') }}
+                >
                   Security Key // Password
                 </Text>
                 <View 
-                  className={`h-16 bg-[#121212]/90 rounded-xl border flex-row items-center px-4 ${
+                  className={`bg-[#121212]/90 rounded-xl border flex-row items-center px-4 ${
                     focusedInput === 'password' ? 'border-[#CCF900]' : 'border-neutral-800'
                   }`}
+                  style={{ height: hp('7.5%') }}
                 >
-                  <Lock color={focusedInput === 'password' ? LN_VOLT : '#555'} size={20} className="mr-3" />
+                  <Lock color={focusedInput === 'password' ? LN_VOLT : '#555'} size={hp('2.5%')} style={{ marginRight: wp('3%') }} />
                   <TextInput
-                    className="flex-1 text-base text-white font-bold h-full"
+                    className="flex-1 text-white font-bold h-full"
+                    style={{ fontSize: hp('1.8%') }}
                     placeholder="••••••••"
                     placeholderTextColor="#444"
                     secureTextEntry={!showPassword}
@@ -170,30 +192,38 @@ export default function LoginScreen() {
                     onFocus={() => setFocusedInput('password')}
                     onBlur={() => setFocusedInput(null)}
                   />
-                  <TouchableOpacity onPress={() => setShowPassword(!showPassword)} className="p-2">
+                  <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={{ padding: wp('2%') }}>
                     {showPassword ? (
-                      <EyeOff color="#555" size={20} />
+                      <EyeOff color="#555" size={hp('2.5%')} />
                     ) : (
-                      <Eye color="#555" size={20} />
+                      <Eye color="#555" size={hp('2.5%')} />
                     )}
                   </TouchableOpacity>
                 </View>
               </View>
 
               {/* Forgot Password */}
-              <TouchableOpacity className="items-end mt-2">
-                <Text className="text-neutral-400 text-sm font-bold uppercase tracking-wider border-b border-[#CCF900]/50 pb-0.5">
+              <TouchableOpacity style={{ alignItems: 'flex-end', marginTop: hp('0.5%') }}>
+                <Text 
+                    className="text-neutral-400 font-bold uppercase border-b border-[#CCF900]/50"
+                    style={{ fontSize: hp('1.4%'), letterSpacing: 1, paddingBottom: 2 }}
+                >
                   Reset Credentials?
                 </Text>
               </TouchableOpacity>
 
               {/* Main Action Button */}
               <TouchableOpacity
-                className={`h-16 bg-[#CCF900] justify-center items-center mt-4 group ${loading ? 'opacity-70' : ''}`}
+                className={`bg-[#CCF900] justify-center items-center group ${loading ? 'opacity-70' : ''}`}
                 onPress={handleLogin}
                 disabled={loading}
                 activeOpacity={0.9}
-                style={{ transform: [{ skewX: '-12deg' }], borderRadius: 4 }}
+                style={{ 
+                    height: hp('7.5%'), 
+                    marginTop: hp('2%'),
+                    transform: [{ skewX: '-12deg' }], 
+                    borderRadius: 4 
+                }}
               >
                 {loading ? (
                    <View style={{ transform: [{ skewX: '12deg' }] }}>
@@ -201,10 +231,13 @@ export default function LoginScreen() {
                    </View>
                 ) : (
                   <View className="flex-row items-center" style={{ transform: [{ skewX: '12deg' }] }}>
-                    <Text className="text-black text-lg font-black uppercase tracking-widest mr-2">
+                    <Text 
+                        className="text-black font-black uppercase mr-2"
+                        style={{ fontSize: hp('2%'), letterSpacing: 2 }}
+                    >
                       INITIATE SESSION
                     </Text>
-                    <Zap color="black" size={20} fill="black" />
+                    <Zap color="black" size={hp('2.5%')} fill="black" />
                   </View>
                 )}
               </TouchableOpacity>
@@ -212,13 +245,19 @@ export default function LoginScreen() {
             </View>
 
             {/* --- Footer --- */}
-            <View className="pb-8 items-center">
+            <View style={{ paddingBottom: hp('4%'), alignItems: 'center' }}>
                <View className="flex-row items-center">
-                  <Text className="text-neutral-400 text-xs font-medium mr-2">
+                  <Text 
+                    className="text-neutral-400 font-medium mr-2"
+                    style={{ fontSize: hp('1.4%') }}
+                  >
                     New to PulseBoard?
                   </Text>
                   <TouchableOpacity onPress={() => router.push('/auth/register')}>
-                    <Text className="text-white font-black text-xs uppercase tracking-wider border-b border-[#CCF900]">
+                    <Text 
+                        className="text-white font-black uppercase border-b border-[#CCF900]"
+                        style={{ fontSize: hp('1.4%'), letterSpacing: 1 }}
+                    >
                       Create Account
                     </Text>
                   </TouchableOpacity>

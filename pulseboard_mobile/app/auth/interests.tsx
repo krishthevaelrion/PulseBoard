@@ -1,7 +1,7 @@
 import { View, Text, ScrollView, TouchableOpacity } from "react-native";
 import { useState } from "react";
+import { widthPercentageToDP as wp, heightPercentageToDP as hp } from 'react-native-responsive-screen';
 import ClubCard from "../../src/components/ClubCard";
-
 
 // Club type
 type Club = {
@@ -33,49 +33,100 @@ export default function Interests() {
   };
 
   return (
-    <ScrollView className="flex-1 bg-black px-5 pt-14">
+    <ScrollView 
+      className="flex-1 bg-black"
+      // Use contentContainerStyle for padding to ensure scrolling works well
+      contentContainerStyle={{ paddingHorizontal: wp('5%'), paddingTop: hp('7%'), paddingBottom: hp('5%') }}
+    >
 
-      {/* LOGO */}
-      <View className="items-center mb-6">
-        <View className="w-24 h-24 rounded-full border-2 border-green-400 items-center justify-center mb-3">
-          <Text className="text-green-400 text-4xl font-extrabold">PB</Text>
+      {/* LOGO SECTION */}
+      <View style={{ marginBottom: hp('3%'), alignItems: 'center' }}>
+        <View 
+          className="rounded-full border-2 border-green-400 items-center justify-center"
+          style={{ 
+            width: wp('28%'), 
+            height: wp('28%'), // Keeping height same as width for a perfect circle
+            marginBottom: hp('1.5%') 
+          }}
+        >
+          <Text 
+            className="text-green-400 font-extrabold"
+            style={{ fontSize: hp('4.5%') }} // Responsive font size
+          >
+            PB
+          </Text>
         </View>
-        <Text className="text-green-400 text-2xl font-bold">
+        <Text 
+          className="text-green-400 font-bold"
+          style={{ fontSize: hp('3.2%') }}
+        >
           PulseBoard
         </Text>
       </View>
 
-      <Text className="text-green-400 text-xl font-semibold text-center mb-1">
+      {/* HEADER TEXT */}
+      <Text 
+        className="text-green-400 font-semibold text-center"
+        style={{ fontSize: hp('2.2%'), marginBottom: hp('0.5%') }}
+      >
         Select Your Interests
       </Text>
-      <Text className="text-gray-400 text-center mb-6">
+      <Text 
+        className="text-gray-400 text-center"
+        style={{ fontSize: hp('1.8%'), marginBottom: hp('3%') }}
+      >
         Choose the clubs you'd like to follow
       </Text>
 
-      {clubs.map((club) => (
-        <ClubCard
-          key={club.id}
-          icon={club.icon}
-          name={club.name}
-          selected={selected.includes(club.id)}
-          onPress={() => toggleClub(club.id)}
-        />
-      ))}
+      {/* CLUBS LIST */}
+      <View style={{ gap: hp('1.5%') }}> 
+        {clubs.map((club) => (
+          /* NOTE: Ensure your ClubCard component accepts style props or 
+             uses flex/responsive units internally too. 
+             If ClubCard has fixed height, consider passing a height prop using hp().
+          */
+          <View key={club.id}>
+             <ClubCard
+              icon={club.icon}
+              name={club.name}
+              selected={selected.includes(club.id)}
+              onPress={() => toggleClub(club.id)}
+            />
+          </View>
+        ))}
+      </View>
 
-      {/* BUTTON */}
+      {/* MAIN BUTTON */}
       <TouchableOpacity
         disabled={selected.length === 0}
-        className={`mt-6 py-4 rounded-xl items-center ${
+        className={`rounded-xl items-center justify-center ${
           selected.length === 0 ? "bg-gray-700" : "bg-green-500"
         }`}
+        style={{ 
+            marginTop: hp('4%'), 
+            paddingVertical: hp('2%'),
+            width: wp('90%') // Ensures button is consistent width relative to screen
+        }}
       >
-        <Text className="text-black font-bold text-lg">
+        <Text 
+            className="text-black font-bold"
+            style={{ fontSize: hp('2.2%') }}
+        >
           SELECT AT LEAST ONE CLUB
         </Text>
       </TouchableOpacity>
 
-      <TouchableOpacity className="mt-4 items-center mb-10">
-        <Text className="text-green-400">Skip for now</Text>
+      {/* SKIP BUTTON */}
+      <TouchableOpacity 
+        className="items-center"
+        style={{ marginTop: hp('2%'), marginBottom: hp('5%') }}
+      >
+        <Text 
+            className="text-green-400"
+            style={{ fontSize: hp('1.8%') }}
+        >
+            Skip for now
+        </Text>
       </TouchableOpacity>
 
     </ScrollView>
