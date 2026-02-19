@@ -64,3 +64,18 @@ export const getEventFeed = async (req: Request, res: Response) => {
     res.status(500).json({ message: 'Error fetching event feed', error });
   }
 };
+// --- Get Events for a Single Club ---
+export const getEventsByClubId = async (req: Request, res: Response) => {
+  try {
+    const { clubId } = req.params;
+    // We find all events where clubId matches and sort by date
+    const events = await Event.find({ 
+      clubId: Number(clubId),
+      badge: { $in: ['LIVE', 'UPCOMING'] } 
+    }).sort({ date: 1 });
+
+    res.status(200).json(events);
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching events for this club', error });
+  }
+};

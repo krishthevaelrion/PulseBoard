@@ -90,3 +90,30 @@ export const getAllClubs = async (req: Request, res: Response) => {
     res.status(500).json({ message: "Server error" });
   }
 };
+
+
+export const getClubById = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    // Convert to number because clubId is numeric
+    const numericId = Number(id);
+
+    if (isNaN(numericId)) {
+      return res.status(400).json({ message: "Invalid club ID" });
+    }
+
+    const club = await Club.findOne({ clubId: numericId });
+
+    if (!club) {
+      return res.status(404).json({ message: "Club not found" });
+    }
+
+    res.status(200).json(club);
+
+  } catch (error) {
+    console.error("Error fetching club by ID:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+

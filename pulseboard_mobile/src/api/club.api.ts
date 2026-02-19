@@ -5,8 +5,8 @@ export const toggleFollowClubApi = (clubId: number) => {
   return client.post(`/clubs/follow/${clubId}`);
 };
 
-export const getClubById = async (id: string) => {
-  const res = await client.get(`/clubs/${id}`);
+export const getClubById = async (clubId: number) => {
+  const res = await client.get(`/clubs/${clubId}`);
   return res.data;
 };
 

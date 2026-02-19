@@ -16,7 +16,7 @@ import { toggleFollowClubApi, getAllClubs } from '../../src/api/club.api';
 import { getUserProfile } from '../../src/api/user.api';
 import { LinearGradient } from 'expo-linear-gradient';
 import { widthPercentageToDP as wp, heightPercentageToDP as hp } from 'react-native-responsive-screen';
-
+// import clubId from '../../src/components/ClubCard'
 const THEME = {
   ACCENT: '#CCF900',
   ACCENT_GLOW: 'rgba(204, 249, 0, 0.15)',
@@ -226,7 +226,7 @@ export default function ClubsScreen() {
             const isLoading = loadingId === club.id;
 
             return (
-              <View key={club._id}
+              <View key={club.id}
                 style={{ width: wp('42%'), marginBottom: hp('2%') }}>
                 <View className={`rounded-[20px] border justify-between relative overflow-hidden ${
                     isFollowed ? 'bg-[#0E0E10] border-[#CCF900]/30' : 'bg-[#09090B] border-white/5'
@@ -240,7 +240,7 @@ export default function ClubsScreen() {
                   <TouchableOpacity
                     style={{ flex: 1 }}
                     activeOpacity={0.9}
-                    onPress={() => router.push(`/clubs/${club._id}`)}
+                    onPress={() => router.push(`/clubs/${club.id}`)}
                   >
                     <View>
                       <View className="flex-row justify-between items-start"
