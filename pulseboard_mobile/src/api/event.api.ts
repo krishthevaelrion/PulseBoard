@@ -15,16 +15,27 @@ export const getEventFeed = async () => {
 
 /**
  * Get events specifically for one club
- * Matches the backend route: GET /api/events/club/:clubId
  */
 export const fetchEventsByClub = async (clubId: number) => {
   try {
-    // We use the 'api' client which already handles your base URL and headers
     const response = await api.get(`/events/club/${clubId}`);
     return response.data;
   } catch (error) {
     console.error(`Error fetching events for club ${clubId}:`, error);
-    // Return an empty array so the UI doesn't crash
     return [];
+  }
+};
+
+/**
+ * Create a new event in MongoDB
+ * Matches your POST /api/events route
+ */
+export const createEventApi = async (eventData: any) => {
+  try {
+    const response = await api.post('/events', eventData);
+    return response.data;
+  } catch (error) {
+    console.error('Error creating event:', error);
+    throw error;
   }
 };

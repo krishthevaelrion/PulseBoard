@@ -41,6 +41,8 @@ type UIClub = {
   description: string;
   category: string;
   icon: string;
+  image?: string;
+  email?: string;
 };
 
 export default function ClubsScreen() {
@@ -62,6 +64,8 @@ export default function ClubsScreen() {
         description: club.description,
         category: club.category,
         icon: clubIcons[club.clubId] || '🔥',
+        image: club.image,
+        email: club.email,
       }));
       setClubs(mapped);
     } catch (e) {
@@ -234,9 +238,10 @@ export default function ClubsScreen() {
         {displayedClubs.length > 0 ? (
           displayedClubs.map(club => (
             <ClubCard
-              key={club.id}
+              key={club.id} 
               icon={club.icon}
               name={club.name}
+              image={club.image}
               description={club.description}
               isFollowed={followedClubs.includes(club.id)}
               isLoading={loadingId === club.id}
