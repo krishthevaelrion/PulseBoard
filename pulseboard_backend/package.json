@@ -1,25 +1,27 @@
 {
   "name": "pulseboard_backend",
   "version": "1.0.0",
-  "main": "server.js",
+  "private": true,
   "scripts": {
-    "start": "node src/server.ts"
+    "dev": "ts-node src/server.ts",
+    "start": "ts-node src/server.ts"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
-    "cors": "^2.8.5",
+    "cors": "^2.8.6",
     "dotenv": "^17.2.3",
-    "express": "^5.2.1",
+    "express": "^4.21.2",
     "google-auth-library": "^10.5.0",
     "jsonwebtoken": "^9.0.3",
     "mongodb": "^7.0.0",
     "mongoose": "^9.1.5"
   },
-  "type": "module",
   "devDependencies": {
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "@types/jsonwebtoken": "^9.0.10",
-    "@types/node": "^25.0.10"
+    "@types/node": "^22.2.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
   }
 }

@@ -1,39 +1,5 @@
 import type { Request, Response } from 'express';
-// FIX: Added .ts extension back because your Node environment requires it
-import Event from '../models/Event.model.ts'; 
-import User from '../models/User.model.ts';   
-
-// --- Get My Events Count (FIXED) ---
-export const getMyEventsCount = async (req: any, res: Response) => {
-  try {
-    const userId = req.user?.userId;
-    
-    if (!userId) {
-      return res.status(401).json({ message: "Unauthorized: User ID missing" });
-    }
-
-    const user = await User.findById(userId).select('following');
-    const followingRaw = user?.following || [];
-
-    // Mixed Type Logic (Matches both Numbers and Strings)
-    const followingMixed = [
-      ...followingRaw.map((id: any) => Number(id)), 
-      ...followingRaw.map((id: any) => String(id))
-    ];
-
-    const count = await Event.countDocuments({ 
-      clubId: { $in: followingMixed as any },
-      badge: { $in: ['LIVE', 'UPCOMING'] } 
-    });
-
-    console.log(`User ${userId} follows ${followingRaw.length} clubs. Found ${count} active events.`);
-    res.json({ count });
-
-  } catch (error) {
-    console.error("Error counting events:", error);
-    res.status(500).json({ message: "Server Error", error });
-  }
-};
+import Event from '../models/Event.model'; // Removed .ts extension for standard import
 
 // --- Create Event ---
 export const createEvent = async (req: Request, res: Response) => {
@@ -89,5 +55,20 @@ export const getEventFeed = async (req: Request, res: Response) => {
   } catch (error) {
     console.error("Aggregation Error:", error);
     res.status(500).json({ message: 'Error fetching event feed', error });
+  }
+};
+// --- Get Events for a Single Club ---
+export const getEventsByClubId = async (req: Request, res: Response) => {
+  try {
+    const { clubId } = req.params;
+    // We find all events where clubId matches and sort by date
+    const events = await Event.find({ 
+      clubId: Number(clubId),
+      badge: { $in: ['LIVE', 'UPCOMING'] } 
+    }).sort({ date: 1 });
+
+    res.status(200).json(events);
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching events for this club', error });
   }
 };

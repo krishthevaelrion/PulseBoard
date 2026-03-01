@@ -1,11 +1,11 @@
-import axios from 'axios';
+import api from './client';
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000';
-
+/**
+ * Get the global feed of all LIVE and UPCOMING events
+ */
 export const getEventFeed = async () => {
   try {
-    // FIX: Explicit full path to match server.ts app.use("/api/events", ...)
-    const response = await axios.get(`${API_URL}/api/events/feed`);
+    const response = await api.get('/events/feed');
     return response.data;
   } catch (error) {
     console.error('Error fetching event feed:', error);
@@ -13,7 +13,18 @@ export const getEventFeed = async () => {
   }
 };
 
-export const getMyEventsCount = async () => {
-  const response = await axios.get(`${API_URL}/api/events/my-count`); 
-  return response.data; 
+/**
+ * Get events specifically for one club
+ * Matches the backend route: GET /api/events/club/:clubId
+ */
+export const fetchEventsByClub = async (clubId: number) => {
+  try {
+    // We use the 'api' client which already handles your base URL and headers
+    const response = await api.get(`/events/club/${clubId}`);
+    return response.data;
+  } catch (error) {
+    console.error(`Error fetching events for club ${clubId}:`, error);
+    // Return an empty array so the UI doesn't crash
+    return [];
+  }
 };

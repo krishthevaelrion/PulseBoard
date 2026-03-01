@@ -1,4 +1,4 @@
-import { getGoogleClient } from "../utils/googleClient.ts";
+import { getGoogleClient } from "../utils/googleClient";
 
 export const getGoogleUser = async (code: string) => {
   const client = getGoogleClient();

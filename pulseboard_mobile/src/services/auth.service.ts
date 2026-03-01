@@ -1,5 +1,6 @@
 import api from "../api/client";
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { registerForPushNotifications } from "../services/notifications";
 
 // --- Register Types ---
 export interface RegisterPayload {
@@ -32,8 +33,6 @@ export interface LoginResponse {
 export const registerUser = async (
   data: RegisterPayload
 ): Promise<RegisterResponse> => {
-  console.log("Registering data:", data);
-  // Post to /auth/register
   const res = await api.post<RegisterResponse>("/auth/register", data);
   return res.data;
 };
@@ -42,22 +41,53 @@ export const registerUser = async (
 export const loginUser = async (
   data: LoginPayload
 ): Promise<LoginResponse> => {
-  // Post to /auth/login
   const res = await api.post<LoginResponse>("/auth/login", data);
-  
-  // Store the token automatically upon successful login
+
   if (res.data.token) {
+    // 1. Save auth token
     await AsyncStorage.setItem("token", res.data.token);
+
+    // 2. Get Expo push token
+    const expoPushToken = await registerForPushNotifications();
+
+    // 3. Save token to backend
+    if (expoPushToken) {
+      await api.post(
+        "/users/save-push-token",
+        { expoPushToken },
+        {
+          headers: {
+            Authorization: `Bearer ${res.data.token}`,
+          },
+        }
+      );
+    }
   }
-  
+
   return res.data;
 };
 
 // --- Google Auth Function ---
 export const googleLoginUser = async (code: string) => {
   const res = await api.post("/auth/google/callback", { code });
+
   if (res.data.token) {
     await AsyncStorage.setItem("token", res.data.token);
+
+    const expoPushToken = await registerForPushNotifications();
+
+    if (expoPushToken) {
+      await api.post(
+        "/users/save-push-token",
+        { expoPushToken },
+        {
+          headers: {
+            Authorization: `Bearer ${res.data.token}`,
+          },
+        }
+      );
+    }
   }
+
   return res.data;
 };

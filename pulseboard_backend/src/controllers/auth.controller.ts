@@ -1,7 +1,7 @@
 import type { Request, Response } from "express";
-import User from "../models/User.model.ts";
+import User from "../models/User.model";
 import bcrypt from "bcryptjs";
-import { getGoogleUser } from "../services/googleOAuth.service.ts";
+import { getGoogleUser } from "../services/googleOAuth.service";
 import jwt from "jsonwebtoken";
 
 // LOCAL REGISTRATION
@@ -20,14 +20,30 @@ export const register = async (req: Request, res: Response) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    await User.create({
+    const user = await User.create({
       name,
       email,
       password: hashedPassword,
       provider: "local",
     });
 
-    return res.status(201).json({ message: "User created" });
+    // 🔥 CREATE TOKEN JUST LIKE LOGIN
+    const token = jwt.sign(
+      { userId: user._id },
+      process.env.JWT_SECRET!,
+      { expiresIn: "7d" }
+    );
+
+    return res.status(201).json({
+      token,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+      },
+      message: "User created",
+    });
+
   } catch (error) {
     console.error(error);
     return res.status(500).json({ message: "Server error" });

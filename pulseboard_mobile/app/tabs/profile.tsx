@@ -13,8 +13,6 @@ import { widthPercentageToDP as wp, heightPercentageToDP as hp } from 'react-nat
 
 // API Imports
 import { getUserProfile } from '../../src/api/user.api';
-import { getFollowedClubs } from '../../src/api/club.api';
-import { getMyEventsCount } from '../../src/api/event.api';
 
 // --- THEME CONSTANTS ---
 const THEME_ACCENT = '#CCF900';
@@ -107,11 +105,6 @@ const SectionHeader = ({ title, icon: Icon }: any) => (
 
 export default function ProfileScreen() {
   const [user, setUser] = useState<UserData | null>(null);
-  const [followedClubs, setFollowedClubs] = useState([]);
-  
-  // FIX: Added eventsCount state here
-  const [eventsCount, setEventsCount] = useState(0);
-  
   const [loading, setLoading] = useState(true);
   const [sessionSeed] = useState(Math.random().toString(36).substring(7));
 
@@ -120,15 +113,11 @@ export default function ProfileScreen() {
     useCallback(() => {
       const loadData = async () => {
         try {
-          const [profileRes, clubsRes, eventCountRes] = await Promise.all([
+          const [profileRes] = await Promise.all([
             getUserProfile(),
-            getFollowedClubs(),
-            getMyEventsCount()
           ]);
-          
+
           setUser(profileRes);
-          setFollowedClubs(clubsRes.data || clubsRes || []);
-          setEventsCount(eventCountRes?.count || 0);
 
         } catch (error: any) {
           if (error.response?.status === 401) {
@@ -188,95 +177,47 @@ export default function ProfileScreen() {
           <View style={{
             backgroundColor: BG_CARD,
             borderRadius: 32,
-            padding: wp('6%'),
+            paddingVertical: hp('4%'),
+            paddingHorizontal: wp('6%'),
             borderWidth: 1,
             borderColor: BORDER_COLOR,
-            marginBottom: hp('3%'),
+            marginBottom: hp('4%'),
             flexDirection: 'row',
-            alignItems: 'center'
+            alignItems: 'center',
+            justifyContent: 'center'
           }}>
-            {/* Avatar with Glow and Shifted Position */}
+            {/* Avatar with Glow */}
             <View style={{
-              padding: 4,
+              padding: 6,
               backgroundColor: 'rgba(204, 249, 0, 0.05)',
               borderRadius: 999,
               borderWidth: 1,
               borderColor: 'rgba(204, 249, 0, 0.2)',
-              marginRight: wp('8%'),
               marginLeft: wp('2%'),
+              marginRight: wp('16%')
             }}>
               <UserAvatar
-                size={hp('9%')}
+                size={hp('10%')}
                 name={displayName}
                 src={displayAvatar}
                 bgColor="#000"
               />
             </View>
 
-            <View style={{ flex: 1 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
-                <Text style={{ color: 'white', fontSize: hp('2.4%'), fontWeight: '900', marginRight: 8 }}>
+            <View style={{ flex: 1, alignItems: 'flex-start' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: hp('0.5%') }}>
+                <Text style={{ color: 'white', fontSize: hp('2.8%'), fontWeight: '900', marginRight: 8 }}>
                   {displayName}
                 </Text>
-                <Sparkles color={THEME_ACCENT} size={14} fill={THEME_ACCENT} />
+                <Sparkles color={THEME_ACCENT} size={16} fill={THEME_ACCENT} />
               </View>
-              <Text style={{ color: '#A3A3A3', fontSize: hp('1.6%'), fontWeight: '500', marginBottom: 8 }}>
+              <Text style={{ color: '#A3A3A3', fontSize: hp('1.6%'), fontWeight: '500', marginBottom: hp('1.5%') }}>
                 {displayEmail}
               </Text>
 
-              <View style={{ alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 4, backgroundColor: '#222', borderRadius: 8, borderWidth: 1, borderColor: '#333' }}>
-                <Text style={{ color: '#fff', fontSize: 10, fontWeight: 'bold', textTransform: 'uppercase' }}>Student</Text>
+              <View style={{ paddingHorizontal: 12, paddingVertical: 4, backgroundColor: 'rgba(255, 255, 255, 0.05)', borderRadius: 10, borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.1)' }}>
+                <Text style={{ color: THEME_ACCENT, fontSize: hp('1.2%'), fontWeight: '800', textTransform: 'uppercase', letterSpacing: 1 }}>Student</Text>
               </View>
-            </View>
-          </View>
-
-          {/* --- Real-Time Stats Grid (Centered) --- */}
-          <View style={{ 
-            flexDirection: 'row', 
-            justifyContent: 'center', 
-            marginBottom: hp('4%'),
-            gap: wp("4%")
-          }}>
-            
-            {/* Events Stat */}
-            <View style={{ 
-              width: wp('35%'), 
-              backgroundColor: BG_CARD, 
-              borderRadius: 24, 
-              paddingVertical: hp('2.5%'), 
-              borderWidth: 1, 
-              borderColor: BORDER_COLOR,
-              alignItems: 'center',      
-              justifyContent: 'center',  
-              gap: 4                                    
-            }}>
-              {/* FIX: Using the eventsCount state here */}
-              <Text style={{ color: '#38BDF8', fontSize: hp('2.8%'), fontWeight: '900', textAlign: 'center' }}>
-                {eventsCount}
-              </Text>
-              <Text style={{ color: '#52525B', fontSize: hp('1.2%'), fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: 1, textAlign: 'center' }}>
-                Events
-              </Text>
-            </View>
-
-            {/* Clubs Stat */}
-            <View style={{ 
-              width: wp('35%'), 
-              backgroundColor: BG_CARD, 
-              borderRadius: 24, 
-              paddingVertical: hp('2.5%'), 
-              borderWidth: 1, 
-              borderColor: BORDER_COLOR,
-              alignItems: 'center',      
-              justifyContent: 'center',  
-              gap: 4                                    
-            }}>
-              <Text style={{ color: '#F472B6', fontSize: hp('2.8%'), fontWeight: '900', textAlign: 'center' }}>
-                {followedClubs.length}
-              </Text>
-              <Text style={{ color: '#52525B', fontSize: hp('1.2%'), fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: 1, textAlign: 'center' }}>
-                Clubs
-              </Text>
             </View>
           </View>
 
