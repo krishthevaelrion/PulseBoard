@@ -6,7 +6,7 @@ import {
 } from 'react-native';
 import {
     Menu, Calendar, PlayCircle, MapPin, LogOut,
-    X, Grid, Siren, Settings, ChevronRight, Plus
+    X, Grid, Siren, Settings, ChevronRight, Plus, ChevronLeft
 } from 'lucide-react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { getEventFeed, createEventApi } from '../../src/api/event.api';
@@ -15,7 +15,7 @@ import { getAllClubs } from '../../src/api/club.api';
 import { widthPercentageToDP as wp, heightPercentageToDP as hp } from 'react-native-responsive-screen';
 import { MotiView, AnimatePresence } from 'moti';
 import { Easing } from 'react-native-reanimated';
-import DateTimePicker from '@react-native-community/datetimepicker';
+
 
 const THEME_ACCENT = '#CCF900';
 
@@ -83,6 +83,8 @@ export default function ClubHomeScreen() {
     });
     const [showDatePicker, setShowDatePicker] = useState(false);
     const [eventDate, setEventDate] = useState(new Date());
+    const [showTimePicker, setShowTimePicker] = useState(false);
+    const [eventTime, setEventTime] = useState(new Date());
 
     useFocusEffect(useCallback(() => { loadData(); }, []));
 
@@ -210,6 +212,7 @@ export default function ClubHomeScreen() {
                                     </View>
                                     <View style={{ flex: 1 }}>
                                         <Text style={{ color: 'white', fontSize: hp('2%'), fontWeight: 'bold' }}>{event.title}</Text>
+                                        <Text style={{ color: THEME_ACCENT, fontSize: hp('1.4%'), fontWeight: 'bold' }}>{event.clubName}</Text>
                                         <Text style={{ color: '#52525B', fontSize: hp('1.4%') }}>{event.timeDisplay} @ {event.location}</Text>
                                     </View>
                                     <Text style={{ fontSize: hp('2.2%') }}>{event.icon}</Text>
@@ -231,13 +234,19 @@ export default function ClubHomeScreen() {
 
             {/* PUBLISH MODAL */}
             <Modal visible={modalVisible} animationType="slide" transparent>
-                <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.95)', justifyContent: 'center', padding: wp('5%') }}>
-                    <ScrollView contentContainerStyle={{ backgroundColor: '#0E0E10', padding: wp('6%'), borderRadius: 24, borderWidth: 1, borderColor: '#27272A' }}>
+                <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.95)', justifyContent: 'center', padding: wp('3%') }}>
+                    <ScrollView contentContainerStyle={{ backgroundColor: '#0E0E10', padding: wp('6%'), borderRadius: 24, borderWidth: 1, borderColor: '#27272A', width: '100%' }}>
                         <Text style={{ color: 'white', fontSize: hp('2.8%'), fontWeight: '900' }}>Post New Event</Text>
                         <Text style={{ color: THEME_ACCENT, fontSize: hp('1.4%'), marginBottom: hp('2%') }}>Admin: {adminClub?.name || 'Your Club'}</Text>
 
                         <Label text="Title" /><CustomInput placeholder="Event Name" onChangeText={(t) => setEventForm({ ...eventForm, title: t })} />
-                        <Label text="Description" /><CustomInput placeholder="Details..." multiline style={{ height: hp('8%') }} onChangeText={(t) => setEventForm({ ...eventForm, description: t })} />
+                        <Label text="Description" />
+                        <CustomInput
+                            placeholder="Details..."
+                            multiline
+                            style={{ minHeight: hp('15%'), textAlignVertical: 'top' }}
+                            onChangeText={(t) => setEventForm({ ...eventForm, description: t })}
+                        />
 
                         <View style={{ flexDirection: 'row', gap: wp('2.5%') }}>
                             <View style={{ flex: 1 }}>
@@ -252,20 +261,47 @@ export default function ClubHomeScreen() {
                                     </Text>
                                 </TouchableOpacity>
                             </View>
-                            <View style={{ flex: 1 }}><Label text="Time" /><CustomInput placeholder="6:00 PM" onChangeText={(t) => setEventForm({ ...eventForm, timeDisplay: t })} /></View>
+                            <View style={{ flex: 1 }}>
+                                <Label text="Time" />
+                                <TouchableOpacity
+                                    activeOpacity={0.7}
+                                    onPress={() => setShowTimePicker(true)}
+                                    style={{ backgroundColor: '#161618', padding: hp('1.5%'), borderRadius: 10, marginTop: hp('0.5%'), borderWidth: 1, borderColor: '#222', justifyContent: 'center' }}
+                                >
+                                    <Text style={{ color: eventForm.timeDisplay ? 'white' : '#52525B' }}>
+                                        {eventForm.timeDisplay || "6:00 PM"}
+                                    </Text>
+                                </TouchableOpacity>
+                            </View>
                         </View>
 
-                        {showDatePicker && (
-                            <DateTimePicker
-                                value={eventDate}
-                                mode="date"
-                                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                                onChange={(event, selectedDate) => {
-                                    setShowDatePicker(false);
-                                    if (selectedDate) setEventDate(selectedDate);
-                                }}
-                            />
-                        )}
+                        <CustomDatePickerModal
+                            visible={showDatePicker}
+                            date={eventDate}
+                            onCancel={() => setShowDatePicker(false)}
+                            onConfirm={(selectedDate: any) => {
+                                setShowDatePicker(false);
+                                if (selectedDate) setEventDate(selectedDate);
+                            }}
+                        />
+
+                        <CustomTimePickerModal
+                            visible={showTimePicker}
+                            time={eventTime}
+                            onCancel={() => setShowTimePicker(false)}
+                            onConfirm={(selectedDate: any) => {
+                                setShowTimePicker(false);
+                                if (selectedDate) {
+                                    setEventTime(selectedDate);
+                                    const hours = selectedDate.getHours();
+                                    const minutes = selectedDate.getMinutes();
+                                    const ampm = hours >= 12 ? 'PM' : 'AM';
+                                    const displayHours = hours % 12 || 12;
+                                    const displayMinutes = minutes.toString().padStart(2, '0');
+                                    setEventForm({ ...eventForm, timeDisplay: `${displayHours}:${displayMinutes} ${ampm}` });
+                                }
+                            }}
+                        />
 
                         <Label text="Location" /><CustomInput placeholder="Room/Venue" onChangeText={(t) => setEventForm({ ...eventForm, location: t })} />
 
@@ -311,6 +347,154 @@ export default function ClubHomeScreen() {
 
 const Label = ({ text }: { text: string }) => <Text style={{ color: THEME_ACCENT, fontSize: 10, fontWeight: 'bold', marginTop: hp('2%') }}>{text.toUpperCase()}</Text>;
 const CustomInput = (props: TextInputProps) => <TextInput {...props} placeholderTextColor="#52525B" style={[{ backgroundColor: '#161618', color: 'white', padding: hp('1.5%'), borderRadius: 10, marginTop: hp('0.5%'), borderWidth: 1, borderColor: '#222' }, props.style]} />;
+
+const CustomDatePickerModal = ({ visible, date, onConfirm, onCancel }: any) => {
+    const [currentMonth, setCurrentMonth] = useState(date || new Date());
+    const [selectedDate, setSelectedDate] = useState(date || new Date());
+
+    const daysInMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0).getDate();
+    const firstDay = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1).getDay();
+
+    const changeMonth = (delta: number) => {
+        const newMonth = new Date(currentMonth);
+        newMonth.setMonth(newMonth.getMonth() + delta);
+        setCurrentMonth(newMonth);
+    };
+
+    if (!visible) return null;
+
+    return (
+        <Modal visible={visible} animationType="fade" transparent>
+            <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'center', alignItems: 'center', padding: wp('5%') }}>
+                <MotiView from={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} style={{ width: '100%', backgroundColor: '#121212', borderRadius: 24, padding: wp('6%'), borderWidth: 1, borderColor: '#27272A' }}>
+                    <Text style={{ color: 'white', fontSize: hp('2.2%'), fontWeight: 'bold', marginBottom: hp('2%') }}>Select Date</Text>
+
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: hp('2%') }}>
+                        <TouchableOpacity onPress={() => changeMonth(-1)} style={{ padding: 5 }}><ChevronLeft color="white" size={hp('2.5%')} /></TouchableOpacity>
+                        <Text style={{ color: 'white', fontSize: hp('2%'), fontWeight: 'bold' }}>
+                            {currentMonth.toLocaleString('default', { month: 'long', year: 'numeric' })}
+                        </Text>
+                        <TouchableOpacity onPress={() => changeMonth(1)} style={{ padding: 5 }}><ChevronRight color="white" size={hp('2.5%')} /></TouchableOpacity>
+                    </View>
+
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+                        {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(d => (
+                            <View key={d} style={{ width: '14.28%', alignItems: 'center', marginBottom: hp('1%') }}>
+                                <Text style={{ color: '#737373', fontSize: hp('1.4%'), fontWeight: 'bold' }}>{d}</Text>
+                            </View>
+                        ))}
+                        {Array.from({ length: firstDay }).map((_, i) => <View key={`empty-${i}`} style={{ width: '14.28%' }} />)}
+                        {Array.from({ length: daysInMonth }).map((_, i) => {
+                            const day = i + 1;
+                            const isSelected = selectedDate.getDate() === day && selectedDate.getMonth() === currentMonth.getMonth() && selectedDate.getFullYear() === currentMonth.getFullYear();
+                            return (
+                                <TouchableOpacity
+                                    key={`day-${day}`}
+                                    onPress={() => setSelectedDate(new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day))}
+                                    style={{
+                                        width: '14.28%', alignItems: 'center', justifyContent: 'center', height: wp('10%'),
+                                        backgroundColor: isSelected ? THEME_ACCENT : 'transparent', borderRadius: 99
+                                    }}
+                                >
+                                    <Text style={{ color: isSelected ? 'black' : 'white', fontWeight: isSelected ? 'bold' : 'normal', fontSize: hp('1.6%') }}>{day}</Text>
+                                </TouchableOpacity>
+                            )
+                        })}
+                    </View>
+
+                    <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginTop: hp('3%'), gap: wp('4%') }}>
+                        <TouchableOpacity onPress={onCancel} style={{ paddingVertical: hp('1%'), paddingHorizontal: wp('4%') }}><Text style={{ color: '#A1A1AA', fontWeight: 'bold' }}>Cancel</Text></TouchableOpacity>
+                        <TouchableOpacity onPress={() => onConfirm(selectedDate)} style={{ paddingVertical: hp('1%'), paddingHorizontal: wp('5%'), backgroundColor: THEME_ACCENT, borderRadius: 12 }}><Text style={{ color: 'black', fontWeight: 'bold' }}>Confirm</Text></TouchableOpacity>
+                    </View>
+                </MotiView>
+            </View>
+        </Modal>
+    );
+};
+
+const CustomTimePickerModal = ({ visible, time, onConfirm, onCancel }: any) => {
+    const defaultHour = time ? (time.getHours() % 12 || 12) : 6;
+    const defaultMinute = time ? time.getMinutes() : 0;
+    const defaultAm = time ? time.getHours() < 12 : false;
+
+    const [selectedHour, setSelectedHour] = useState(defaultHour);
+    const [selectedMinute, setSelectedMinute] = useState(defaultMinute);
+    const [isAm, setIsAm] = useState(defaultAm);
+
+    const ITEM_HEIGHT = hp('6%');
+
+    const handleConfirm = () => {
+        const newTime = new Date();
+        newTime.setHours(isAm ? (selectedHour === 12 ? 0 : selectedHour) : (selectedHour === 12 ? 12 : selectedHour + 12));
+        newTime.setMinutes(selectedMinute);
+        onConfirm(newTime);
+    };
+
+    if (!visible) return null;
+
+    const hours = Array.from({ length: 12 }).map((_, i) => i + 1);
+    const minutes = Array.from({ length: 60 }).map((_, i) => i);
+    const periods = ['AM', 'PM'];
+
+    const renderScrollList = (data: any[], selectedValue: any, onSelect: (val: any) => void, padZero: boolean = true) => (
+        <View style={{ height: ITEM_HEIGHT * 3, width: wp('22%'), overflow: 'hidden' }}>
+            <View style={{ position: 'absolute', top: ITEM_HEIGHT, width: '100%', height: ITEM_HEIGHT, borderTopWidth: 2, borderBottomWidth: 2, borderColor: THEME_ACCENT }} />
+            <ScrollView
+                showsVerticalScrollIndicator={false}
+                snapToInterval={ITEM_HEIGHT}
+                decelerationRate="fast"
+                contentContainerStyle={{ paddingVertical: ITEM_HEIGHT }}
+                onMomentumScrollEnd={(e) => {
+                    const index = Math.round(e.nativeEvent.contentOffset.y / ITEM_HEIGHT);
+                    if (data[index] !== undefined) onSelect(data[index]);
+                }}
+                contentOffset={{ x: 0, y: Math.max(0, data.indexOf(selectedValue)) * ITEM_HEIGHT }}
+            >
+                {data.map((item, idx) => {
+                    const isSelected = item === selectedValue;
+                    return (
+                        <View key={idx} style={{ height: ITEM_HEIGHT, justifyContent: 'center', alignItems: 'center' }}>
+                            <Text style={{
+                                color: isSelected ? 'white' : '#52525B',
+                                fontSize: isSelected ? hp('3%') : hp('2.2%'),
+                                fontWeight: isSelected ? '900' : 'bold'
+                            }}>
+                                {typeof item === 'number' && padZero ? item.toString().padStart(2, '0') : item}
+                            </Text>
+                        </View>
+                    );
+                })}
+            </ScrollView>
+        </View>
+    );
+
+    return (
+        <Modal visible={visible} animationType="fade" transparent>
+            <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'center', alignItems: 'center', padding: wp('5%') }}>
+                <MotiView from={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} style={{ width: '100%', backgroundColor: '#121212', borderRadius: 24, padding: wp('6%'), borderWidth: 1, borderColor: '#27272A' }}>
+                    <Text style={{ color: 'white', fontSize: hp('2.2%'), fontWeight: 'bold', marginBottom: hp('3%') }}>Set Time</Text>
+
+                    <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center' }}>
+                        {renderScrollList(hours, selectedHour, setSelectedHour)}
+
+                        <Text style={{ color: 'white', fontSize: hp('4%'), fontWeight: 'bold', marginHorizontal: wp('2%') }}>:</Text>
+
+                        {renderScrollList(minutes, selectedMinute, setSelectedMinute)}
+
+                        <View style={{ width: wp('4%') }} />
+
+                        {renderScrollList(periods, isAm ? 'AM' : 'PM', (val) => setIsAm(val === 'AM'), false)}
+                    </View>
+
+                    <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginTop: hp('5%'), gap: wp('4%') }}>
+                        <TouchableOpacity onPress={onCancel} style={{ paddingVertical: hp('1%'), paddingHorizontal: wp('4%') }}><Text style={{ color: '#A1A1AA', fontWeight: 'bold' }}>Cancel</Text></TouchableOpacity>
+                        <TouchableOpacity onPress={handleConfirm} style={{ paddingVertical: hp('1%'), paddingHorizontal: wp('5%'), backgroundColor: THEME_ACCENT, borderRadius: 12 }}><Text style={{ color: 'black', fontWeight: 'bold' }}>OK</Text></TouchableOpacity>
+                    </View>
+                </MotiView>
+            </View>
+        </Modal>
+    );
+};
 
 const styles = StyleSheet.create({
     fab: {
