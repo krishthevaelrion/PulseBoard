@@ -54,9 +54,9 @@ export default function ClubTabLayout() {
                     }}
                 />
                 <Tabs.Screen
-                    name="history"
+                    name="posts"
                     options={{
-                        title: 'HISTORY',
+                        title: 'POSTS',
                         tabBarIcon: ({ color }) => (
                             <View style={{ marginBottom: hp('0.5%') }}>
                                 <Clock color={color} size={iconSize} strokeWidth={2.5} />
