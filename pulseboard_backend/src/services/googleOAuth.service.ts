@@ -9,7 +9,10 @@ export const getGoogleUserFromIdToken = async (idToken: string) => {
 
   const ticket = await client.verifyIdToken({
     idToken,
-    audience: process.env.GOOGLE_CLIENT_ID,
+    audience: [
+      process.env.GOOGLE_CLIENT_ID!,
+      process.env.GOOGLE_MOBILE_CLIENT_ID!
+    ].filter(Boolean),
   });
 
   const payload = ticket.getPayload();
