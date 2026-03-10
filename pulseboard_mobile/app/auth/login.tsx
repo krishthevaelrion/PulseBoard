@@ -62,8 +62,8 @@ export default function LoginScreen() {
       const proxyRedirectUri = 'https://auth.expo.io/@ashvr/pulseboard_mobile';
 
       // ② What auth.expo.io relays back TO (the local Expo Go deep-link)
-      //    Linking.createURL() → "exp://10.23.x.x:8081/--/expo-auth-session" in Expo Go
-      const returnUrl = Linking.createURL('expo-auth-session');
+      //    Linking.createURL() → "exp://10.23.x.x:8081/--/auth/login" in Expo Go
+      const returnUrl = Linking.createURL('auth/login');
 
       // ③ Raw Google OAuth URL (sends user to Google, redirect back to auth.expo.io)
       const googleAuthUrl =
@@ -73,7 +73,8 @@ export default function LoginScreen() {
         `&response_type=id_token` +
         `&scope=${encodeURIComponent('openid profile email')}` +
         `&state=${state}` +
-        `&nonce=${nonce}`;
+        `&nonce=${nonce}` +
+        `&prompt=${encodeURIComponent('consent select_account')}`;
 
       // ④ auth.expo.io /start URL — registers the session so the proxy knows where to relay
       //    Flow: /start → Google → auth.expo.io → returnUrl (exp://)
@@ -87,25 +88,39 @@ export default function LoginScreen() {
 
       if (result.type === 'success' && result.url) {
         // auth.expo.io appends the token params to the exp:// URL as query params
-        const returnedUrl = new URL(result.url);
-        const idToken =
-          returnedUrl.searchParams.get('id_token') ||
-          new URLSearchParams(result.url.split('#')[1] || '').get('id_token');
+        // Use extremely fast Regex to prevent single-threaded Hermes/JSC bottlenecks parsing Polyfills
+        const idTokenMatch = result.url.match(/id_token=([^&]+)/);
+        const idToken = idTokenMatch ? idTokenMatch[1] : null;
 
         if (!idToken) {
-          const err = returnedUrl.searchParams.get('error_description') ||
-            returnedUrl.searchParams.get('error') ||
-            'No id_token received from Google.';
+          const errMatch = result.url.match(/error_description=([^&]+)/) || result.url.match(/error=([^&]+)/);
+          const err = errMatch ? decodeURIComponent(errMatch[1]) : 'No id_token received from Google.';
           Alert.alert('Google Error', err);
           return;
         }
 
         const data = await googleLoginUser(idToken);
         if (data.token) {
+          // Club portal routing logic
+          const clubEmails = [
+            'quantclub@iitj.ac.in', 'devluplabs@iitj.ac.in', 'raid@iitj.ac.in',
+            'inside@iitj.ac.in', 'theproductcub@iitj.ac.in', 'theproductclub@iitj.ac.in',
+            'psoc@iitj.ac.in', 'tgt@iitj.ac.in', 'shutterbugs@iitj.ac.in',
+            'atelier@iitj.ac.in', 'framex@iitj.ac.in', 'designerds@iitj.ac.in',
+            'dramebaaz@iitj.ac.in', 'ecell@iitj.ac.in', 'nexus@iitj.ac.in', 'respawn@iitj.ac.in'
+          ];
+
+          const userEmail = data.user?.email || '';
+
           // Small delay to let the browser tab fully close before navigating.
           // On Android, navigating while the Custom Chrome Tab is still dismissing
           // can cause Expo Router to show an unmatched route screen.
-          setTimeout(() => router.replace('/tabs/home'), 300);
+          // (Delay removed: Bug fixed via valid returnUrl)
+          if (clubEmails.includes(userEmail.toLowerCase().trim())) {
+            router.replace('/club_tabs/home');
+          } else {
+            router.replace('/tabs/home');
+          }
         }
       } else if (result.type === 'cancel' || result.type === 'dismiss') {
         // user cancelled — do nothing
