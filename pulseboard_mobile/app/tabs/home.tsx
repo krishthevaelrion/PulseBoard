@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
   SafeAreaView, StatusBar, ActivityIndicator, Platform, StyleSheet,
@@ -6,12 +6,16 @@ import {
 } from 'react-native';
 import {
   Menu, Calendar, PlayCircle, MapPin, LogOut,
-  X, Grid, Users, Box, Siren, Target, Briefcase, Settings, ChevronRight, Plus, Send
+  X, Grid, Users, Box, Siren, Target, Briefcase, Settings, ChevronRight, Plus, Send, Mail, 
+  Layers, Search, ShieldCheck, GraduationCap, Home as HomeIcon
 } from 'lucide-react-native';
+import * as Icons from 'lucide-react-native'; 
 import { router, useFocusEffect } from 'expo-router';
 import { getEventFeed, createEventApi } from '../../src/api/event.api';
 import { getUserProfile } from '../../src/api/user.api';
 import { getAllClubs } from '../../src/api/club.api';
+import { getAllCategories } from '../../src/api/category.api';
+import { getMailsByCategory} from '../../src/api/mail.api'; //
 import { widthPercentageToDP as wp, heightPercentageToDP as hp } from 'react-native-responsive-screen';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MotiView, AnimatePresence } from 'moti';
@@ -19,7 +23,6 @@ import { Easing } from 'react-native-reanimated';
 
 const THEME_ACCENT = '#CCF900';
 
-// Utility for RGBA conversion
 const getRgba = (hex: string, opacity: number) => {
   if (!hex) return `rgba(255, 255, 255, ${opacity})`;
   const r = parseInt(hex.slice(1, 3), 16);
@@ -73,6 +76,12 @@ export default function HomeScreen() {
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<any>({ name: "Loading...", following: [] });
 
+  // --- SMART INBOX STATES ---
+  const [categories, setCategories] = useState<any[]>([]);
+  const [activeMailCategory, setActiveMailCategory] = useState<number | null>(null);
+  const [mails, setMails] = useState<any[]>([]);
+  const [loadingMails, setLoadingMails] = useState(false);
+
   // --- ADMIN LOGIC ---
   const [adminClub, setAdminClub] = useState<any>(null);
   const [modalVisible, setModalVisible] = useState(false);
@@ -84,18 +93,44 @@ export default function HomeScreen() {
 
   useFocusEffect(useCallback(() => { loadData(); }, []));
 
+  // Fetch Mails whenever category changes
+  useEffect(() => {
+    if (activeMailCategory) {
+      fetchMails(activeMailCategory);
+    }
+  }, [activeMailCategory]);
+
+  const fetchMails = async (id: number) => {
+    setLoadingMails(true);
+    try {
+      const data = await getMailsByCategory(id);
+      console.log("FRONTEND RECEIVED DATA:", data);
+      setMails(data || []);
+    } catch (err) {
+      console.log("Mail fetch error", err);
+    } finally {
+      setLoadingMails(false);
+    }
+  };
+
   const loadData = async () => {
     try {
       if (events.length === 0) setLoading(true);
-      const [userData, eventData, allClubs] = await Promise.all([
+      const [userData, eventData, allClubs, categoryData] = await Promise.all([
         getUserProfile(),
         getEventFeed(),
-        getAllClubs()
+        getAllClubs(),
+        getAllCategories()
       ]);
 
       const profile = userData.data || userData;
       setUser({ name: profile.name, email: profile.email, following: profile.following || [] });
       setEvents(eventData || []);
+      setCategories(categoryData || []);
+
+      if (categoryData && categoryData.length > 0 && activeMailCategory === null) {
+        setActiveMailCategory(categoryData[0].categoryId);
+      }
 
       const linkedClub = allClubs.find((c: any) => c.email?.toLowerCase() === profile.email?.toLowerCase());
       setAdminClub(linkedClub);
@@ -117,7 +152,7 @@ export default function HomeScreen() {
       await createEventApi({
         ...eventForm,
         clubId: adminClub.clubId,
-        icon: adminClub.icon || '📅', // Using existing club icon
+        icon: adminClub.icon || '📅', 
         date: new Date(dateInput).toISOString(),
       });
       Alert.alert("Success", "Event published!");
@@ -166,8 +201,7 @@ export default function HomeScreen() {
 
         <ScrollView showsVerticalScrollIndicator={false} className="flex-1" contentContainerStyle={{ paddingBottom: hp('5%') }}>
 
-          {/* --- NEW CREATE POST BAR (VISIBLE TO ADMINS ONLY) --- */}
-          {/* Feed Content */}
+          {/* Happening Now */}
           <SectionHeader title="Happening Now" icon={PlayCircle} color={THEME_ACCENT} />
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: wp('6%') }} style={{ marginBottom: hp('5%') }}>
             {liveEvents.map((event: any) => {
@@ -194,8 +228,9 @@ export default function HomeScreen() {
             })}
           </ScrollView>
 
+          {/* Coming Up */}
           <SectionHeader title="Coming Up" icon={Calendar} color="#A0A0A0" />
-          <View style={{ paddingHorizontal: wp('6%'), gap: hp('1.5%') }}>
+          <View style={{ paddingHorizontal: wp('6%'), gap: hp('1.5%'), marginBottom: hp('4%') }}>
             {upcomingEvents.map((event: any) => {
               const isFollowed = user.following.includes(event.clubId);
               const cardColor = event.color || '#fff';
@@ -215,26 +250,84 @@ export default function HomeScreen() {
               )
             })}
           </View>
+
+          {/* --- SMART INBOX SECTION --- */}
+          <SectionHeader title="Smart Inbox" icon={Mail} color={THEME_ACCENT} />
+          
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false} 
+            contentContainerStyle={{ paddingLeft: wp('6%'), marginBottom: hp('2.5%') }}
+          >
+            {categories.map((cat) => {
+              const isActive = activeMailCategory === cat.categoryId;
+              const IconComp = (Icons as any)[cat.icon] || Icons.Mail;
+              
+              return (
+                <TouchableOpacity 
+                  key={cat._id}
+                  onPress={() => setActiveMailCategory(cat.categoryId)}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    backgroundColor: isActive ? getRgba(cat.color, 0.15) : '#121212',
+                    paddingHorizontal: wp('4.5%'),
+                    paddingVertical: hp('1.4%'),
+                    borderRadius: 20,
+                    marginRight: wp('3%'),
+                    borderWidth: 1,
+                    borderColor: isActive ? cat.color : 'rgba(255,255,255,0.05)'
+                  }}
+                >
+                  <IconComp color={isActive ? cat.color : '#52525B'} size={hp('1.8%')} />
+                  <Text style={{ color: isActive ? 'white' : '#737373', marginLeft: wp('2.5%'), fontSize: hp('1.5%'), fontWeight: '700' }}>
+                    {cat.name}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+
+          {/* Dynamic Mail Content */}
+          <View style={{ paddingHorizontal: wp('6%') }}>
+            {loadingMails ? (
+              <ActivityIndicator color={THEME_ACCENT} style={{ marginVertical: hp('2%') }} />
+            ) : mails.length === 0 ? (
+              <View style={{ padding: wp('10%'), alignItems: 'center', backgroundColor: '#0A0A0A', borderRadius: 24, borderStyle: 'dashed', borderWidth: 1, borderColor: '#222' }}>
+                <Text style={{ color: '#444', fontWeight: 'bold' }}>No items in this category yet</Text>
+              </View>
+            ) : (
+              <View style={{ gap: hp('1.5%') }}>
+                {mails.map((mail: any) => (
+                  <TouchableOpacity key={mail._id} style={{ backgroundColor: '#121212', borderRadius: 20, padding: wp('5%'), borderLeftWidth: 4, borderLeftColor: mail.priority === 'high' ? '#EF4444' : '#222' }}>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
+                      <Text style={{ color: THEME_ACCENT, fontSize: hp('1.2%'), fontWeight: 'bold' }}>{mail.sender.toUpperCase()}</Text>
+                      <Text style={{ color: '#52525B', fontSize: hp('1.2%') }}>{new Date(mail.createdAt).toLocaleDateString()}</Text>
+                    </View>
+                    <Text style={{ color: 'white', fontWeight: 'bold', fontSize: hp('1.8%'), marginBottom: 4 }}>{mail.subject}</Text>
+                    <Text style={{ color: '#737373', fontSize: hp('1.4%') }} numberOfLines={2}>{mail.body}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+          </View>
+
         </ScrollView>
       </SafeAreaView>
 
-      {/* PUBLISH MODAL - FULL REQUIREMENTS */}
+      {/* PUBLISH MODAL */}
       <Modal visible={modalVisible} animationType="slide" transparent>
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.95)', justifyContent: 'center', padding: wp('5%') }}>
           <ScrollView contentContainerStyle={{ backgroundColor: '#0E0E10', padding: wp('6%'), borderRadius: 24, borderWidth: 1, borderColor: '#27272A' }}>
             <Text style={{ color: 'white', fontSize: hp('2.8%'), fontWeight: '900' }}>Post New Event</Text>
             <Text style={{ color: THEME_ACCENT, fontSize: hp('1.4%'), marginBottom: hp('2%') }}>Admin: {adminClub?.name}</Text>
-
             <Label text="Title" /><CustomInput placeholder="Event Name" onChangeText={(t) => setEventForm({ ...eventForm, title: t })} />
             <Label text="Description" /><CustomInput placeholder="Details..." multiline style={{ height: hp('8%') }} onChangeText={(t) => setEventForm({ ...eventForm, description: t })} />
-
             <View style={{ flexDirection: 'row', gap: wp('2.5%') }}>
               <View style={{ flex: 1 }}><Label text="Date (YYYY-MM-DD)" /><CustomInput placeholder="2026-03-01" onChangeText={(t) => setEventForm({ ...eventForm, dateInput: t })} /></View>
               <View style={{ flex: 1 }}><Label text="Time" /><CustomInput placeholder="6:00 PM" onChangeText={(t) => setEventForm({ ...eventForm, timeDisplay: t })} /></View>
             </View>
-
             <Label text="Location" /><CustomInput placeholder="Room/Venue" onChangeText={(t) => setEventForm({ ...eventForm, location: t })} />
-
             <View style={{ flexDirection: 'row', gap: wp('2.5%'), marginTop: hp('2%') }}>
               {['LIVE', 'UPCOMING'].map(b => (
                 <TouchableOpacity key={b} onPress={() => setEventForm({ ...eventForm, badge: b as any })} style={{ flex: 1, padding: hp('1.5%'), borderRadius: 12, backgroundColor: eventForm.badge === b ? THEME_ACCENT : '#161618', alignItems: 'center' }}>
@@ -242,7 +335,6 @@ export default function HomeScreen() {
                 </TouchableOpacity>
               ))}
             </View>
-
             <TouchableOpacity onPress={handlePublishEvent} disabled={isSubmitting} style={{ backgroundColor: THEME_ACCENT, padding: hp('2%'), borderRadius: 15, alignItems: 'center', marginTop: hp('3%') }}>
               {isSubmitting ? <ActivityIndicator color="black" /> : <Text style={{ color: 'black', fontWeight: '900' }}>PUBLISH EVENT</Text>}
             </TouchableOpacity>
@@ -251,7 +343,7 @@ export default function HomeScreen() {
         </View>
       </Modal>
 
-      {/* Original Sidebar Logic */}
+      {/* Sidebar Logic */}
       <AnimatePresence>
         {showSidebar && (
           <View style={[StyleSheet.absoluteFill, { zIndex: 50 }]}>
@@ -260,12 +352,14 @@ export default function HomeScreen() {
             </MotiView>
             <MotiView from={{ translateX: wp('100%') }} animate={{ translateX: 0 }} exit={{ translateX: wp('100%') }} transition={{ type: 'timing', duration: 250 }} style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: wp('82%'), backgroundColor: '#050505', borderLeftWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }}>
               <SafeAreaView style={{ flex: 1 }}>
-                {/* ... Original Sidebar Content ... */}
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: wp('6%'), paddingTop: hp('3%') }}>
                   <Text style={{ color: 'white', fontSize: hp('2.8%'), fontWeight: '900' }}>Menu</Text>
                   <TouchableOpacity onPress={() => setShowSidebar(false)}><X color="#fff" size={hp('2.2%')} /></TouchableOpacity>
                 </View>
                 <ScrollView contentContainerStyle={{ padding: wp('6%') }}>
+                  {adminClub && (
+                    <SidebarItem index={0} icon={Plus} label="Publish Event" color={THEME_ACCENT} onPress={() => { setShowSidebar(false); setModalVisible(true); }} />
+                  )}
                   <SidebarItem index={1} icon={Grid} label="LHC Heatmap" color="#6366F1" />
                   <SidebarItem index={4} icon={Siren} label="S.O.S Protocol" color="#F87171" isAlert={true} />
                   <SidebarItem index={7} icon={Settings} label="Settings" color="#A1A1AA" />
