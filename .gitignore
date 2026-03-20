@@ -1,0 +1,3 @@
+# Cursor MCP config (contains secrets like connection strings)
+.cursor/mcp.json
+
