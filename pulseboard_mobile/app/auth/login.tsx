@@ -332,8 +332,10 @@ export default function LoginScreen() {
                 </View>
               </View>
 
-              {/* Forgot Password */}
-              <TouchableOpacity style={{ alignItems: 'flex-end', marginTop: hp('0.5%') }}>
+              <TouchableOpacity 
+                style={{ alignItems: 'flex-end', marginTop: hp('0.5%') }}
+                onPress={() => router.push('/auth/forgot-password')}
+              >
                 <Text
                   className="text-neutral-400 font-bold uppercase border-b border-[#CCF900]/50"
                   style={{ fontSize: hp('1.4%'), letterSpacing: 1, paddingBottom: 2 }}
