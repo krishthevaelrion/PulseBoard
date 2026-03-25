@@ -50,6 +50,10 @@ export const handleInboundEmail = async (req: Request, res: Response) => {
         // Use Gemini AI to parse the email
         const parsed = await parseEventFromEmail(subject, bodyText);
 
+        if (!parsed) {
+            return res.status(200).json({ message: 'Email received but not event-worthy, skipped.' });
+        }
+
         // Save the event to MongoDB
         const newEvent = new Event({
             clubId: club.clubId,

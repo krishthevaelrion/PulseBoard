@@ -12,42 +12,50 @@ export interface ParsedEvent {
 }
 
 /**
- * Uses Gemini AI to parse any freeform email into structured event data.
- * Falls back to sensible defaults if fields are missing.
+ * Uses Gemini AI to:
+ * 1. Decide if the email is event-worthy for a college student
+ * 2. If yes, parse it into structured event data
+ *
+ * Returns null if the email is NOT event-worthy (spam, OTPs, promotions, etc.)
  */
 export async function parseEventFromEmail(
     subject: string,
     body: string
-): Promise<ParsedEvent> {
+): Promise<ParsedEvent | null> {
     const prompt = `
-You are an event extraction AI for a college club notification app called PulseBoard.
+You are an AI assistant for PulseBoard, a college student productivity app.
 
-Given an email with the following subject and body, extract event information and respond ONLY with a valid JSON object — no markdown, no explanation, just raw JSON.
+Analyse this email and decide if it represents something actionable or important for a college student — such as:
+- A club event, fest, or cultural activity
+- An interview, internship, or placement notice
+- A deadline, submission, or academic requirement
+- A workshop, hackathon, seminar, or talk
+- A scholarship or opportunity with a deadline
+- Any campus notice that requires attention or attendance
+
+Do NOT treat as events: OTPs, password resets, promotional marketing emails, newsletters with no specific date/deadline, order confirmations, social media notifications, or general spam.
 
 Subject: ${subject}
-Body: ${body}
+Body: ${body.slice(0, 2000)}
 
-Extract these fields:
-- title: The event name (use subject if no explicit title, strip prefixes like [EVENT])
-- description: A short 1-2 sentence description of the event
-- date: The event date in ISO 8601 format (YYYY-MM-DDTHH:mm:ss.sssZ). If no year is mentioned, assume 2026. If no date is found, use tomorrow's date.
-- timeDisplay: Human readable time like "6:00 PM" or "10:30 AM". If not found, use "TBD"
-- location: Venue or room. If not found, use "TBD"
-- badge: "LIVE" if the event is happening right now, otherwise "UPCOMING"
-- icon: A single relevant emoji for the event type (e.g. 🎤 for talk, 🏆 for competition, 💻 for hackathon, 🎉 for party, 🎭 for cultural, 📚 for academic)
-- color: A vibrant hex color code that suits the event theme (e.g. "#6366F1" for tech, "#F59E0B" for cultural, "#10B981" for sports)
-
-Respond ONLY with JSON like this:
+If this email IS event-worthy, respond with this JSON (no markdown, no extra text):
 {
-  "title": "...",
-  "description": "...",
-  "date": "2026-03-10T18:00:00.000Z",
-  "timeDisplay": "6:00 PM",
-  "location": "...",
+  "isEvent": true,
+  "title": "short event title",
+  "description": "1-2 sentence description",
+  "date": "2026-MM-DDTHH:mm:ss.sssZ",
+  "timeDisplay": "6:00 PM or TBD",
+  "location": "venue or TBD",
   "badge": "UPCOMING",
-  "icon": "💻",
-  "color": "#6366F1"
+  "icon": "single emoji",
+  "color": "#hexcode"
 }
+
+If this email is NOT event-worthy, respond with exactly:
+{ "isEvent": false }
+
+Icon guide: 💻 tech/hackathon, 🎤 talk/seminar, 🏆 competition, 🎭 cultural/fest, 📚 academic, 💼 placement/interview, 🛠️ workshop, 🎉 social, 📅 general
+Color guide: "#6366F1" tech, "#F59E0B" cultural, "#10B981" sports/health, "#3B82F6" academic, "#EC4899" social, "#F97316" placement/career
 `;
 
     try {
@@ -59,6 +67,8 @@ Respond ONLY with JSON like this:
         // Strip markdown code fences if Gemini wraps in ```json ... ```
         const clean = text.replace(/^```json\s*/i, '').replace(/```\s*$/, '').trim();
         const parsed = JSON.parse(clean);
+
+        if (!parsed.isEvent) return null;
 
         return {
             title: parsed.title || subject || 'Untitled Event',

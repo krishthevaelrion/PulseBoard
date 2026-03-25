@@ -73,10 +73,9 @@ export default function LoginScreen() {
         `&response_type=code` +
         `&scope=${encodeURIComponent('openid profile email https://www.googleapis.com/auth/gmail.readonly')}` +
         `&access_type=offline` +
-        `&prompt=consent` +
+        `&prompt=${encodeURIComponent('consent select_account')}` +
         `&state=${state}` +
-        `&nonce=${nonce}` +
-        `&prompt=${encodeURIComponent('consent select_account')}`;
+        `&nonce=${nonce}`;
 
       // ④ auth.expo.io /start URL — registers the session so the proxy knows where to relay
       //    Flow: /start → Google → auth.expo.io → returnUrl (exp://)

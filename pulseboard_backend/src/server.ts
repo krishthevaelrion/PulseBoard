@@ -8,6 +8,7 @@ import eventRoutes from "./routes/event.routes";
 import userRoutes from "./routes/user.routes";
 import testRoutes from "./routes/test.routes";
 import emailRoutes from "./routes/email.routes";
+import personalEventRoutes from "./routes/personalEvent.routes";
 import { startGmailWatcher } from "./services/gmailWatcher.service";
 
 
@@ -30,6 +31,7 @@ app.use("/api/clubs", clubRoutes);
 app.use("/api/events", eventRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/email", emailRoutes);
+app.use("/api/personal-events", personalEventRoutes);
 app.use("/api", testRoutes)
 
 mongoose

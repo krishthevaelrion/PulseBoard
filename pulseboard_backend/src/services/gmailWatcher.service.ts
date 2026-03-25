@@ -1,117 +1,226 @@
-import { ImapFlow } from 'imapflow';
-import { simpleParser } from 'mailparser';
-import Club from '../models/Club.model';
-import Event from '../models/Event.model';
+import User from '../models/User.model';
+import PersonalEvent from '../models/PersonalEvent.model';
+import ProcessedEmail from '../models/ProcessedEmail.model';
 import { parseEventFromEmail } from './emailParser.service';
+import { getGoogleClient } from '../utils/googleClient';
 
 let isRunning = false;
 
-async function checkNewEmails() {
-    const user = process.env.GMAIL_WATCHER_USER;
-    const password = process.env.GMAIL_APP_PASSWORD;
+/** Decode base64url-encoded Gmail message body recursively */
+function extractBody(payload: any): string {
+    if (!payload) return '';
 
-    if (!user || !password) return;
+    if (payload.body?.data) {
+        return Buffer.from(payload.body.data, 'base64url').toString('utf-8');
+    }
 
-    const client = new ImapFlow({
-        host: 'imap.gmail.com',
-        port: 993,
-        secure: true,
-        auth: { user, pass: password },
-        logger: false,
-    });
+    if (payload.parts) {
+        for (const part of payload.parts) {
+            if (part.mimeType === 'text/plain' && part.body?.data) {
+                return Buffer.from(part.body.data, 'base64url').toString('utf-8');
+            }
+        }
+        for (const part of payload.parts) {
+            const text = extractBody(part);
+            if (text) return text;
+        }
+    }
 
-    try {
-        await client.connect();
+    return '';
+}
 
-        const lock = await client.getMailboxLock('INBOX');
+/** Make a Gmail API request, auto-refreshing the access token on 401 */
+async function gmailRequest(user: any, url: string, options: RequestInit = {}): Promise<any> {
+    const makeRequest = (token: string) =>
+        fetch(url, {
+            ...options,
+            headers: {
+                Authorization: `Bearer ${token}`,
+                'Content-Type': 'application/json',
+                ...(options.headers || {}),
+            },
+        });
+
+    let res = await makeRequest(user.googleAccessToken);
+
+    if (res.status === 401 && user.googleRefreshToken) {
+        console.log(`[GmailWatcher] Refreshing token for ${user.email}`);
+        const client = getGoogleClient();
+        client.setCredentials({ refresh_token: user.googleRefreshToken });
+        const { credentials } = await client.refreshAccessToken();
+        user.googleAccessToken = credentials.access_token as string;
+        await user.save();
+
+        res = await makeRequest(user.googleAccessToken);
+    }
+
+    if (!res.ok) {
+        throw new Error(`Gmail API ${res.status}: ${await res.text()}`);
+    }
+
+    return res.json();
+}
+
+async function checkUserEmails(user: any) {
+    const thirtyDaysAgo = Math.floor((Date.now() - 30 * 24 * 60 * 60 * 1000) / 1000);
+
+    const listData = await gmailRequest(
+        user,
+        `https://gmail.googleapis.com/gmail/v1/users/me/messages?q=is:unread+after:${thirtyDaysAgo}&labelIds=INBOX&maxResults=50`
+    );
+
+    const messages: { id: string }[] = listData.messages || [];
+    if (messages.length === 0) {
+        console.log(`[GmailWatcher] No unread emails for ${user.email}`);
+        return;
+    }
+
+    console.log(`[GmailWatcher] ${messages.length} unread email(s) for ${user.email}`);
+
+    for (const msg of messages) {
         try {
-            // Search for unread messages within the last 7 days
-            const sevenDaysAgo = new Date();
-            sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+            // Fetch full message to get Message-ID header
+            const msgData = await gmailRequest(
+                user,
+                `https://gmail.googleapis.com/gmail/v1/users/me/messages/${msg.id}?format=full`
+            );
 
-            const unseenUids = await client.search({
-                seen: false,
-                since: sevenDaysAgo
-            });
-            const uidList = Array.isArray(unseenUids) ? unseenUids : [];
+            const headers: { name: string; value: string }[] = msgData.payload?.headers || [];
 
-            if (uidList.length === 0) {
-                console.log('[GmailWatcher] No new emails.');
-                return;
-            }
+            // RFC 2822 Message-ID — identical for all recipients of the same email
+            const emailMessageId = headers.find(h => h.name.toLowerCase() === 'message-id')?.value?.trim();
+            if (!emailMessageId) continue; // malformed email, skip
 
-            console.log(`[GmailWatcher] Found ${uidList.length} unread email(s) from the last 7 days`);
+            const fromHeader = headers.find(h => h.name.toLowerCase() === 'from');
+            const subjectHeader = headers.find(h => h.name.toLowerCase() === 'subject');
 
-            for (const uid of uidList) {
-                try {
-                    const msgData = await client.fetchOne(String(uid), { source: true }, { uid: true });
-                    if (!msgData || !('source' in msgData) || !msgData.source) continue;
+            const rawFrom = (fromHeader?.value || '').toLowerCase();
+            const from = rawFrom.includes('<')
+                ? rawFrom.replace(/.*<(.+)>.*/, '$1').trim()
+                : rawFrom.trim();
 
-                    const parsed = await simpleParser(msgData.source as Buffer);
-                    const from = parsed.from?.value?.[0]?.address?.toLowerCase() || '';
-                    const subject = parsed.subject || '';
-                    const bodyText = parsed.text || '';
+            const subject = subjectHeader?.value || '';
 
-                    console.log(`[GmailWatcher] From: ${from} | Subject: "${subject}"`);
+            // Check if this email has already been processed before (by anyone)
+            const existing = await ProcessedEmail.findOne({ emailMessageId });
 
-                    // Always mark as read to avoid reprocessing
-                    await client.messageFlagsAdd(String(uid), ['\\Seen'], { uid: true });
+            if (existing) {
+                // Email already seen — check if this specific user was handled
+                const alreadyHandled = existing.processedByUsers.some(
+                    id => id.toString() === user._id.toString()
+                );
+                if (alreadyHandled) continue;
 
-                    // Match sender to a registered club
-                    const club = await Club.findOne({ email: from });
-                    if (!club) {
-                        console.log(`[GmailWatcher] Skipping — no club for: ${from}`);
-                        continue;
-                    }
+                // New user, but email already analysed by Gemini — reuse cached result
+                if (existing.isEvent) {
+                    await PersonalEvent.create({
+                        userId: user._id,
+                        gmailMessageId: msg.id,
+                        title: existing.eventTitle!,
+                        description: existing.eventDescription,
+                        date: existing.eventDate!,
+                        timeDisplay: existing.eventTimeDisplay!,
+                        location: existing.eventLocation!,
+                        badge: existing.eventBadge!,
+                        icon: existing.eventIcon!,
+                        color: existing.eventColor!,
+                        sourceFrom: from,
+                        sourceSubject: subject,
+                    }).catch(() => {}); // ignore if somehow already exists
 
-                    console.log(`[GmailWatcher] Matched club: ${club.name}`);
-
-                    const eventData = await parseEventFromEmail(subject, bodyText);
-
-                    // --- ANTI-DUPLICATION CHECK ---
-                    // Check if this club already created an event with this title in the last 24 hours
-                    const yesterday = new Date();
-                    yesterday.setHours(yesterday.getHours() - 24);
-
-                    const existingEvent = await Event.findOne({
-                        clubId: club.clubId,
-                        title: eventData.title,
-                        createdAt: { $gte: yesterday }
-                    });
-
-                    if (existingEvent) {
-                        console.log(`[GmailWatcher] ⚠️ Skipped duplicate event: "${eventData.title}" for ${club.name}`);
-                        continue;
-                    }
-                    // ------------------------------
-
-                    const newEvent = new Event({
-                        clubId: club.clubId,
-                        title: eventData.title,
-                        description: eventData.description,
-                        date: eventData.date,
-                        timeDisplay: eventData.timeDisplay,
-                        location: eventData.location,
-                        badge: eventData.badge,
-                        icon: eventData.icon,
-                        color: eventData.color,
-                    });
-
-                    await newEvent.save();
-                    console.log(`[GmailWatcher] ✅ Event created: "${newEvent.title}" for ${club.name}`);
-
-                } catch (emailErr) {
-                    console.error(`[GmailWatcher] Error on UID ${uid}:`, (emailErr as Error).message);
+                    console.log(`[GmailWatcher] Reused cached event "${existing.eventTitle}" for ${user.email}`);
                 }
+
+                // Mark this user as handled (whether event or not)
+                await ProcessedEmail.updateOne(
+                    { _id: existing._id },
+                    { $addToSet: { processedByUsers: user._id } }
+                );
+
+                continue;
             }
-        } finally {
-            lock.release();
+
+            // First time seeing this email — call Gemini
+            console.log(`[GmailWatcher] [${user.email}] From: ${from} | Subject: "${subject}"`);
+
+            const bodyText = extractBody(msgData.payload);
+            const eventData = await parseEventFromEmail(subject, bodyText);
+
+            if (!eventData) {
+                // Not event-worthy — store the decision so future users skip Gemini call
+                await ProcessedEmail.create({
+                    emailMessageId,
+                    isEvent: false,
+                    processedByUsers: [user._id],
+                });
+                console.log(`[GmailWatcher] Not event-worthy: "${subject}"`);
+                continue;
+            }
+
+            // Store the parsed result so other users get it for free
+            await ProcessedEmail.create({
+                emailMessageId,
+                isEvent: true,
+                eventTitle: eventData.title,
+                eventDescription: eventData.description,
+                eventDate: eventData.date,
+                eventTimeDisplay: eventData.timeDisplay,
+                eventLocation: eventData.location,
+                eventBadge: eventData.badge,
+                eventIcon: eventData.icon,
+                eventColor: eventData.color,
+                processedByUsers: [user._id],
+            });
+
+            await PersonalEvent.create({
+                userId: user._id,
+                gmailMessageId: msg.id,
+                title: eventData.title,
+                description: eventData.description,
+                date: eventData.date,
+                timeDisplay: eventData.timeDisplay,
+                location: eventData.location,
+                badge: eventData.badge,
+                icon: eventData.icon,
+                color: eventData.color,
+                sourceFrom: from,
+                sourceSubject: subject,
+            });
+
+            console.log(`[GmailWatcher] Created personal event: "${eventData.title}" for ${user.email}`);
+
+        } catch (err) {
+            console.error(`[GmailWatcher] Error on message ${msg.id}:`, (err as Error).message);
+        }
+    }
+}
+
+async function checkAllUsers() {
+    try {
+        const googleUsers = await User.find({
+            provider: 'google',
+            $or: [
+                { googleAccessToken: { $exists: true, $ne: null } },
+                { googleRefreshToken: { $exists: true, $ne: null } },
+            ],
+        });
+
+        if (googleUsers.length === 0) {
+            console.log('[GmailWatcher] No Google-authenticated users found.');
+            return;
         }
 
-        await client.logout();
+        console.log(`[GmailWatcher] Checking ${googleUsers.length} Google user(s)...`);
+
+        for (const user of googleUsers) {
+            try {
+                await checkUserEmails(user);
+            } catch (err) {
+                console.error(`[GmailWatcher] Failed for ${user.email}:`, (err as Error).message);
+            }
+        }
     } catch (err) {
-        console.error('[GmailWatcher] IMAP error:', (err as Error).message);
-        try { await client.logout(); } catch (_) { }
+        console.error('[GmailWatcher] DB error, will retry next cycle:', (err as Error).message);
     }
 }
 
@@ -119,13 +228,7 @@ export function startGmailWatcher(intervalMs = 60_000) {
     if (isRunning) return;
     isRunning = true;
 
-    const user = process.env.GMAIL_WATCHER_USER;
-    if (!user || !process.env.GMAIL_APP_PASSWORD) {
-        console.warn('[GmailWatcher] Not started — add GMAIL_WATCHER_USER + GMAIL_APP_PASSWORD to .env');
-        return;
-    }
-
-    console.log(`[GmailWatcher] 🚀 Watching ${user} every ${intervalMs / 1000}s`);
-    checkNewEmails();
-    setInterval(checkNewEmails, intervalMs);
+    console.log(`[GmailWatcher] Watching all Google users every ${intervalMs / 1000}s`);
+    checkAllUsers();
+    setInterval(checkAllUsers, intervalMs);
 }

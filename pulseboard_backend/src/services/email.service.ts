@@ -1,16 +1,15 @@
-import sgMail from "@sendgrid/mail";
+import nodemailer from "nodemailer";
 
-let isInitialized = false;
-
-const initSendGrid = () => {
-  if (!isInitialized) {
-    sgMail.setApiKey(process.env.SENDGRID_API_KEY!);
-    isInitialized = true;
-  }
-};
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: process.env.GMAIL_WATCHER_USER,
+    pass: process.env.GMAIL_APP_PASSWORD,
+  },
+});
 
 /**
- * Sends a 6-digit OTP verification email using SendGrid.
+ * Sends a 6-digit OTP verification email using Gmail SMTP.
  * Uses a clean, branded HTML template matching PulseBoard's design.
  */
 export const sendOtpEmail = async (
@@ -18,14 +17,9 @@ export const sendOtpEmail = async (
   otp: string,
   userName: string
 ): Promise<void> => {
-  initSendGrid();
-
   const msg = {
+    from: `"PulseBoard" <${process.env.GMAIL_WATCHER_USER}>`,
     to: toEmail,
-    from: {
-      email: process.env.SENDGRID_FROM_EMAIL || "noreply@pulseboard.app",
-      name: "PulseBoard",
-    },
     subject: `${otp} — Your PulseBoard Verification Code`,
     text: `Hi ${userName},\n\nYour PulseBoard verification code is: ${otp}\n\nThis code expires in 10 minutes.\n\nIf you didn't request this, please ignore this email.\n\n— PulseBoard Team`,
     html: `
@@ -75,10 +69,10 @@ export const sendOtpEmail = async (
   };
 
   try {
-    await sgMail.send(msg);
+    await transporter.sendMail(msg);
     console.log(`✅ OTP email sent to ${toEmail}`);
   } catch (error: any) {
-    console.error("❌ SendGrid Error:", error?.response?.body || error.message);
+    console.error("❌ Nodemailer Error:", error.message);
     throw new Error("Failed to send verification email");
   }
 };
