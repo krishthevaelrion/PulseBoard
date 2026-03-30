@@ -180,22 +180,27 @@ export const googleCallback = async (req: Request, res: Response) => {
       ? await getGoogleUserFromIdToken(id_token)
       : await getGoogleUser(code, redirectUri);
 
-    let user = await User.findOne({ email: googleUser.email });
+    const normalizedEmail = googleUser.email!.toLowerCase().trim();
+
+    // Look up by googleId first (most reliable — never changes), then fall back to email
+    let user = await User.findOne({ googleId: googleUser.sub })
+      ?? await User.findOne({ email: normalizedEmail });
 
     if (!user) {
       user = await User.create({
         name: googleUser.name,
-        email: googleUser.email,
+        email: normalizedEmail,
         googleId: googleUser.sub,
         provider: "google",
         googleAccessToken: tokens?.access_token || undefined,
         googleRefreshToken: tokens?.refresh_token || undefined,
-        isVerified: true, // Google-authenticated users are auto-verified
+        isVerified: true,
       });
-    } else if (tokens) {
-      // If user logs in again and we get new tokens (especially refresh_token), update them
-      if (tokens.access_token) user.googleAccessToken = tokens.access_token;
-      if (tokens.refresh_token) user.googleRefreshToken = tokens.refresh_token; // Refresh token is only sent on first consent usually
+    } else {
+      // Patch missing googleId (for accounts created before this fix)
+      if (!user.googleId) user.googleId = googleUser.sub;
+      if (tokens?.access_token) user.googleAccessToken = tokens.access_token;
+      if (tokens?.refresh_token) user.googleRefreshToken = tokens.refresh_token;
       await user.save();
     }
 

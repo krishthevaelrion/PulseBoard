@@ -16,6 +16,7 @@ export interface IProcessedEmail extends Document {
   eventBadge?: 'LIVE' | 'UPCOMING';
   eventIcon?: string;
   eventColor?: string;
+  eventCategory?: string;
   processedByUsers: mongoose.Types.ObjectId[];  // users already handled for this email
 }
 
@@ -31,6 +32,7 @@ const ProcessedEmailSchema: Schema = new Schema(
     eventBadge: { type: String, enum: ['LIVE', 'UPCOMING'] },
     eventIcon: String,
     eventColor: String,
+    eventCategory: String,
     processedByUsers: [{ type: Schema.Types.ObjectId, ref: 'User' }],
   },
   { timestamps: true }

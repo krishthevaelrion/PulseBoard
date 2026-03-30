@@ -1,12 +1,11 @@
 import User from '../models/User.model';
+import Club from '../models/Club.model';
+import Event from '../models/Event.model';
 import PersonalEvent from '../models/PersonalEvent.model';
 import ProcessedEmail from '../models/ProcessedEmail.model';
 import { parseEventFromEmail } from './emailParser.service';
-import { classifyAndGetId } from './classifier.service';
 import { getGoogleClient } from '../utils/googleClient';
 import { sendPushNotification } from './notification.service';
-
-const MISC_CATEGORY_ID = 103;
 
 let isRunning = false;
 
@@ -128,6 +127,7 @@ async function checkUserEmails(user: any) {
                         badge: existing.eventBadge!,
                         icon: existing.eventIcon!,
                         color: existing.eventColor!,
+                        category: existing.eventCategory || 'general',
                         sourceFrom: from,
                         sourceSubject: subject,
                     }).catch(() => {}); // ignore if somehow already exists
@@ -157,27 +157,7 @@ async function checkUserEmails(user: any) {
 
             const bodyText = extractBody(msgData.payload);
 
-            // Step 1: HuggingFace fast filter (with timeout guard)
-            // MISC_CATEGORY_ID (103) with high confidence → skip Gemini
-            // -1 (uncertain/timeout) → pass to Gemini to decide
-            let categoryId = -1;
-            try {
-                categoryId = await Promise.race([
-                    classifyAndGetId(subject, bodyText),
-                    new Promise<number>((resolve) => setTimeout(() => resolve(-1), 35_000)),
-                ]) as number;
-            } catch { categoryId = -1; }
-            if (categoryId === MISC_CATEGORY_ID) {
-                await ProcessedEmail.create({
-                    emailMessageId,
-                    isEvent: false,
-                    processedByUsers: [user._id],
-                });
-                console.log(`[GmailWatcher] HF filtered as misc: "${subject}"`);
-                continue;
-            }
-
-            // Step 2: Gemini deep-parses the email into structured event data
+            // Groq parses and filters the email in one step
             const eventData = await parseEventFromEmail(subject, bodyText);
 
             if (!eventData) {
@@ -186,7 +166,7 @@ async function checkUserEmails(user: any) {
                     isEvent: false,
                     processedByUsers: [user._id],
                 });
-                console.log(`[GmailWatcher] Gemini skipped: "${subject}"`);
+                console.log(`[GmailWatcher] Groq skipped (not an event): "${subject}"`);
                 continue;
             }
 
@@ -202,30 +182,50 @@ async function checkUserEmails(user: any) {
                 eventBadge: eventData.badge,
                 eventIcon: eventData.icon,
                 eventColor: eventData.color,
+                eventCategory: eventData.category,
                 processedByUsers: [user._id],
             });
 
-            await PersonalEvent.create({
-                userId: user._id,
-                gmailMessageId: msg.id,
-                title: eventData.title,
-                description: eventData.description,
-                date: eventData.date,
-                timeDisplay: eventData.timeDisplay,
-                location: eventData.location,
-                badge: eventData.badge,
-                icon: eventData.icon,
-                color: eventData.color,
-                sourceFrom: from,
-                sourceSubject: subject,
-            });
+            // Check if this user is a club account — if so, publish to the global feed
+            const linkedClub = await Club.findOne({ email: user.email.toLowerCase() });
+            if (linkedClub) {
+                await Event.create({
+                    clubId: linkedClub.clubId,
+                    title: eventData.title,
+                    description: eventData.description,
+                    date: eventData.date,
+                    timeDisplay: eventData.timeDisplay,
+                    location: eventData.location,
+                    badge: eventData.badge,
+                    icon: eventData.icon,
+                    color: eventData.color,
+                });
+                console.log(`[GmailWatcher] Published club event: "${eventData.title}" for ${linkedClub.name}`);
+            } else {
+                // Regular user — save to personal Smart Inbox
+                await PersonalEvent.create({
+                    userId: user._id,
+                    gmailMessageId: msg.id,
+                    title: eventData.title,
+                    description: eventData.description,
+                    date: eventData.date,
+                    timeDisplay: eventData.timeDisplay,
+                    location: eventData.location,
+                    badge: eventData.badge,
+                    icon: eventData.icon,
+                    color: eventData.color,
+                    category: eventData.category,
+                    sourceFrom: from,
+                    sourceSubject: subject,
+                });
 
-            if (user.expoPushToken) {
-                sendPushNotification(
-                    user.expoPushToken,
-                    `${eventData.icon} New Event in Smart Inbox`,
-                    eventData.title,
-                ).catch(() => {});
+                if (user.expoPushToken) {
+                    sendPushNotification(
+                        user.expoPushToken,
+                        `${eventData.icon} New Event in Smart Inbox`,
+                        eventData.title,
+                    ).catch(() => {});
+                }
             }
 
             console.log(`[GmailWatcher] Created personal event: "${eventData.title}" for ${user.email}`);
@@ -238,11 +238,14 @@ async function checkUserEmails(user: any) {
 
 async function checkAllUsers() {
     try {
+        // Only scan users who have the app installed (have a push token)
+        // This prevents scanning every account that ever logged in with Google
         const googleUsers = await User.find({
             $or: [
                 { googleAccessToken: { $exists: true, $ne: null } },
                 { googleRefreshToken: { $exists: true, $ne: null } },
             ],
+            expoPushToken: { $exists: true, $ne: null },
         });
 
         if (googleUsers.length === 0) {

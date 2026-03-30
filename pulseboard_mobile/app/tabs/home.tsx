@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity,
   SafeAreaView, StatusBar, ActivityIndicator, Platform, StyleSheet,
@@ -6,18 +6,13 @@ import {
 } from 'react-native';
 import {
   Menu, Calendar, PlayCircle, MapPin, LogOut,
-  X, Grid, Users, Box, Siren, Target, Briefcase, Settings, ChevronRight, Plus, Send, Mail, 
-  Layers, Search, ShieldCheck, GraduationCap, Home as HomeIcon
+  X, Grid, Siren, Settings, ChevronRight, Plus,
 } from 'lucide-react-native';
-import * as Icons from 'lucide-react-native'; 
 import { router, useFocusEffect } from 'expo-router';
 import { getEventFeed, createEventApi } from '../../src/api/event.api';
 import { getUserProfile } from '../../src/api/user.api';
 import { getAllClubs } from '../../src/api/club.api';
-import { getAllCategories } from '../../src/api/category.api';
-import { getMailsByCategory} from '../../src/api/mail.api'; //
 import { widthPercentageToDP as wp, heightPercentageToDP as hp } from 'react-native-responsive-screen';
-import { LinearGradient } from 'expo-linear-gradient';
 import { MotiView, AnimatePresence } from 'moti';
 import { Easing } from 'react-native-reanimated';
 
@@ -76,12 +71,6 @@ export default function HomeScreen() {
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<any>({ name: "Loading...", following: [] });
 
-  // --- SMART INBOX STATES ---
-  const [categories, setCategories] = useState<any[]>([]);
-  const [activeMailCategory, setActiveMailCategory] = useState<number | null>(null);
-  const [mails, setMails] = useState<any[]>([]);
-  const [loadingMails, setLoadingMails] = useState(false);
-
   // --- ADMIN LOGIC ---
   const [adminClub, setAdminClub] = useState<any>(null);
   const [modalVisible, setModalVisible] = useState(false);
@@ -93,44 +82,18 @@ export default function HomeScreen() {
 
   useFocusEffect(useCallback(() => { loadData(); }, []));
 
-  // Fetch Mails whenever category changes
-  useEffect(() => {
-    if (activeMailCategory) {
-      fetchMails(activeMailCategory);
-    }
-  }, [activeMailCategory]);
-
-  const fetchMails = async (id: number) => {
-    setLoadingMails(true);
-    try {
-      const data = await getMailsByCategory(id);
-      console.log("FRONTEND RECEIVED DATA:", data);
-      setMails(data || []);
-    } catch (err) {
-      console.log("Mail fetch error", err);
-    } finally {
-      setLoadingMails(false);
-    }
-  };
-
   const loadData = async () => {
     try {
       if (events.length === 0) setLoading(true);
-      const [userData, eventData, allClubs, categoryData] = await Promise.all([
+      const [userData, eventData, allClubs] = await Promise.all([
         getUserProfile(),
         getEventFeed(),
         getAllClubs(),
-        getAllCategories()
       ]);
 
       const profile = userData.data || userData;
       setUser({ name: profile.name, email: profile.email, following: profile.following || [] });
       setEvents(eventData || []);
-      setCategories(categoryData || []);
-
-      if (categoryData && categoryData.length > 0 && activeMailCategory === null) {
-        setActiveMailCategory(categoryData[0].categoryId);
-      }
 
       const linkedClub = allClubs.find((c: any) => c.email?.toLowerCase() === profile.email?.toLowerCase());
       setAdminClub(linkedClub);
@@ -162,18 +125,14 @@ export default function HomeScreen() {
     finally { setIsSubmitting(false); }
   };
 
-  const sortEventsByFollowing = (eventsList: any[]) => {
-    return [...eventsList].sort((a, b) => {
-      const aFollowed = user.following.includes(a.clubId);
-      const bFollowed = user.following.includes(b.clubId);
-      if (aFollowed && !bFollowed) return -1;
-      if (!aFollowed && bFollowed) return 1;
-      return 0;
-    });
-  };
-
-  const liveEvents = useMemo(() => sortEventsByFollowing(events.filter((e: any) => e.badge === 'LIVE')), [user.following, events]);
-  const upcomingEvents = useMemo(() => sortEventsByFollowing(events.filter((e: any) => e.badge === 'UPCOMING')), [user.following, events]);
+  const liveEvents = useMemo(() =>
+    events.filter((e: any) => e.badge === 'LIVE' && user.following.includes(e.clubId)),
+    [user.following, events]
+  );
+  const upcomingEvents = useMemo(() =>
+    events.filter((e: any) => e.badge === 'UPCOMING' && user.following.includes(e.clubId)),
+    [user.following, events]
+  );
 
   if (loading && events.length === 0) {
     return (
@@ -204,11 +163,16 @@ export default function HomeScreen() {
           {/* Happening Now */}
           <SectionHeader title="Happening Now" icon={PlayCircle} color={THEME_ACCENT} />
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: wp('6%') }} style={{ marginBottom: hp('5%') }}>
-            {liveEvents.map((event: any) => {
-              const isFollowed = user.following.includes(event.clubId);
+            {liveEvents.length === 0 ? (
+              <View style={{ width: wp('88%'), backgroundColor: '#0F0F0F', borderRadius: 24, padding: wp('6%'), alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#1A1A1A', minHeight: hp('16%') }}>
+                <Text style={{ fontSize: hp('3%'), marginBottom: hp('1%') }}>⚡</Text>
+                <Text style={{ color: '#52525B', fontSize: hp('1.6%'), fontWeight: '600', textAlign: 'center' }}>No live events right now</Text>
+                <Text style={{ color: '#333', fontSize: hp('1.4%'), textAlign: 'center', marginTop: hp('0.5%') }}>Follow clubs to see their events here</Text>
+              </View>
+            ) : liveEvents.map((event: any) => {
               const cardColor = event.color || THEME_ACCENT;
               return (
-                <TouchableOpacity key={event._id} activeOpacity={0.8} style={{ width: wp('55%'), backgroundColor: '#121212', borderRadius: 32, marginRight: wp('4%'), padding: wp('5%'), overflow: 'hidden', borderWidth: isFollowed ? 1 : 0, borderColor: isFollowed ? getRgba(cardColor, 0.4) : 'transparent' }}>
+                <TouchableOpacity key={event._id} activeOpacity={0.8} style={{ width: wp('55%'), backgroundColor: '#121212', borderRadius: 32, marginRight: wp('4%'), padding: wp('5%'), overflow: 'hidden', borderWidth: 1, borderColor: getRgba(cardColor, 0.4) }}>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: hp('2%') }}>
                     <View style={{ paddingHorizontal: wp('3%'), paddingVertical: hp('0.5%'), borderRadius: 999, borderWidth: 1, backgroundColor: getRgba(cardColor, 0.2), borderColor: getRgba(cardColor, 0.3) }}>
                       <Text style={{ fontSize: hp('1.2%'), fontWeight: '900', letterSpacing: 2, color: cardColor }}>LIVE</Text>
@@ -231,14 +195,28 @@ export default function HomeScreen() {
           {/* Coming Up */}
           <SectionHeader title="Coming Up" icon={Calendar} color="#A0A0A0" />
           <View style={{ paddingHorizontal: wp('6%'), gap: hp('1.5%'), marginBottom: hp('4%') }}>
-            {upcomingEvents.map((event: any) => {
-              const isFollowed = user.following.includes(event.clubId);
+            {upcomingEvents.length === 0 ? (
+              <TouchableOpacity
+                activeOpacity={0.7}
+                onPress={() => router.push('/tabs/clubs')}
+                style={{ backgroundColor: '#0F0F0F', borderRadius: 20, padding: wp('6%'), alignItems: 'center', borderWidth: 1, borderColor: '#1A1A1A' }}
+              >
+                <Text style={{ fontSize: hp('3.5%'), marginBottom: hp('1.5%') }}>🏛️</Text>
+                <Text style={{ color: 'white', fontSize: hp('1.9%'), fontWeight: '800', textAlign: 'center' }}>No upcoming events</Text>
+                <Text style={{ color: '#52525B', fontSize: hp('1.5%'), textAlign: 'center', marginTop: hp('0.5%'), lineHeight: hp('2.2%') }}>
+                  Follow clubs to see their events here
+                </Text>
+                <View style={{ marginTop: hp('2%'), backgroundColor: THEME_ACCENT, paddingHorizontal: wp('6%'), paddingVertical: hp('1.2%'), borderRadius: 999 }}>
+                  <Text style={{ color: '#000', fontWeight: '900', fontSize: hp('1.5%'), letterSpacing: 1 }}>BROWSE CLUBS →</Text>
+                </View>
+              </TouchableOpacity>
+            ) : upcomingEvents.map((event: any) => {
               const cardColor = event.color || '#fff';
               const dateObj = new Date(event.date);
               return (
-                <TouchableOpacity key={event._id} activeOpacity={0.7} style={{ width: '100%', backgroundColor: '#121212', borderRadius: 24, padding: wp('4%'), flexDirection: 'row', alignItems: 'center', borderWidth: isFollowed ? 1 : 0, borderColor: isFollowed ? getRgba(cardColor, 0.3) : 'transparent' }}>
-                  <View style={{ width: wp('16%'), height: wp('16%'), borderRadius: 16, alignItems: 'center', justifyContent: 'center', marginRight: wp('4%'), backgroundColor: isFollowed ? getRgba(cardColor, 0.1) : '#1A1A1A' }}>
-                    <Text style={{ fontSize: hp('1.2%'), fontWeight: '900', color: isFollowed ? cardColor : '#737373' }}>{dateObj.toLocaleString('default', { month: 'short' }).toUpperCase()}</Text>
+                <TouchableOpacity key={event._id} activeOpacity={0.7} style={{ width: '100%', backgroundColor: '#121212', borderRadius: 24, padding: wp('4%'), flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: getRgba(cardColor, 0.3) }}>
+                  <View style={{ width: wp('16%'), height: wp('16%'), borderRadius: 16, alignItems: 'center', justifyContent: 'center', marginRight: wp('4%'), backgroundColor: getRgba(cardColor, 0.1) }}>
+                    <Text style={{ fontSize: hp('1.2%'), fontWeight: '900', color: cardColor }}>{dateObj.toLocaleString('default', { month: 'short' }).toUpperCase()}</Text>
                     <Text style={{ color: 'white', fontSize: hp('2.5%'), fontWeight: '900' }}>{dateObj.getDate()}</Text>
                   </View>
                   <View style={{ flex: 1 }}>
@@ -249,67 +227,6 @@ export default function HomeScreen() {
                 </TouchableOpacity>
               )
             })}
-          </View>
-
-          {/* --- SMART INBOX SECTION --- */}
-          <SectionHeader title="Smart Inbox" icon={Mail} color={THEME_ACCENT} />
-          
-          <ScrollView 
-            horizontal 
-            showsHorizontalScrollIndicator={false} 
-            contentContainerStyle={{ paddingLeft: wp('6%'), marginBottom: hp('2.5%') }}
-          >
-            {categories.map((cat) => {
-              const isActive = activeMailCategory === cat.categoryId;
-              const IconComp = (Icons as any)[cat.icon] || Icons.Mail;
-              
-              return (
-                <TouchableOpacity 
-                  key={cat._id}
-                  onPress={() => setActiveMailCategory(cat.categoryId)}
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    backgroundColor: isActive ? getRgba(cat.color, 0.15) : '#121212',
-                    paddingHorizontal: wp('4.5%'),
-                    paddingVertical: hp('1.4%'),
-                    borderRadius: 20,
-                    marginRight: wp('3%'),
-                    borderWidth: 1,
-                    borderColor: isActive ? cat.color : 'rgba(255,255,255,0.05)'
-                  }}
-                >
-                  <IconComp color={isActive ? cat.color : '#52525B'} size={hp('1.8%')} />
-                  <Text style={{ color: isActive ? 'white' : '#737373', marginLeft: wp('2.5%'), fontSize: hp('1.5%'), fontWeight: '700' }}>
-                    {cat.name}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
-
-          {/* Dynamic Mail Content */}
-          <View style={{ paddingHorizontal: wp('6%') }}>
-            {loadingMails ? (
-              <ActivityIndicator color={THEME_ACCENT} style={{ marginVertical: hp('2%') }} />
-            ) : mails.length === 0 ? (
-              <View style={{ padding: wp('10%'), alignItems: 'center', backgroundColor: '#0A0A0A', borderRadius: 24, borderStyle: 'dashed', borderWidth: 1, borderColor: '#222' }}>
-                <Text style={{ color: '#444', fontWeight: 'bold' }}>No items in this category yet</Text>
-              </View>
-            ) : (
-              <View style={{ gap: hp('1.5%') }}>
-                {mails.map((mail: any) => (
-                  <TouchableOpacity key={mail._id} style={{ backgroundColor: '#121212', borderRadius: 20, padding: wp('5%'), borderLeftWidth: 4, borderLeftColor: mail.priority === 'high' ? '#EF4444' : '#222' }}>
-                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
-                      <Text style={{ color: THEME_ACCENT, fontSize: hp('1.2%'), fontWeight: 'bold' }}>{mail.sender.toUpperCase()}</Text>
-                      <Text style={{ color: '#52525B', fontSize: hp('1.2%') }}>{new Date(mail.createdAt).toLocaleDateString()}</Text>
-                    </View>
-                    <Text style={{ color: 'white', fontWeight: 'bold', fontSize: hp('1.8%'), marginBottom: 4 }}>{mail.subject}</Text>
-                    <Text style={{ color: '#737373', fontSize: hp('1.4%') }} numberOfLines={2}>{mail.body}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            )}
           </View>
 
         </ScrollView>
