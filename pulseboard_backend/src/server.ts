@@ -15,7 +15,7 @@ import categoryRoutes from "./routes/category.routes";
 import mailRoutes from "./routes/mail.routes";
 import { startGmailWatcher } from "./services/gmailWatcher.service";
 import { startReminderScheduler } from "./services/reminderScheduler.service";
-
+import { initCronJobs } from './jobs/cron';
 const app = express();
 
 app.use(cors());
@@ -32,13 +32,23 @@ app.use("/api/mails", mailRoutes);
 app.use("/api/categories", categoryRoutes);
 app.use("/api", testRoutes);
 
+// --- DATABASE & SERVER START ---
 mongoose
   .connect(process.env.MONGO_URI!)
-  .then(() => console.log("MongoDB connected"))
-  .catch(err => console.error(err));
+  .then(() => {
+    console.log("✅ MongoDB connected");
+    
+    // 1. Start the cron job scheduler once DB is ready
+    initCronJobs(); 
+  })
+  .catch((err) => console.error("❌ MongoDB connection error:", err));
 
-app.listen(process.env.PORT, () => {
-  console.log(`Server running on port ${process.env.PORT}`);
+const PORT = process.env.PORT || 5000;
+
+app.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+  
+  // 2. Start your background services
   startGmailWatcher(300_000);
   startReminderScheduler();
 });
