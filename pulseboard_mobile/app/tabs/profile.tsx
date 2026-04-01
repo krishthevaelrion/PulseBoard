@@ -147,7 +147,7 @@ export default function ProfileScreen() {
         {/* Preferences */}
         <View style={styles.sectionContainer}>
           <Text style={styles.sectionTitle}>GENERAL</Text>
-          <MenuItem icon={Calendar} title="My Calendar" onPress={() => {}} />
+          <MenuItem icon={Calendar} title="My Calendar" onPress={() => router.push('/calendar')} />
         </View>
 
         {/* Account */}

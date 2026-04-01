@@ -13,6 +13,7 @@ import emailRoutes from "./routes/email.routes";
 import personalEventRoutes from "./routes/personalEvent.routes";
 import categoryRoutes from "./routes/category.routes";
 import mailRoutes from "./routes/mail.routes";
+import calendarRoutes from "./routes/calendar.routes";
 import { startGmailWatcher } from "./services/gmailWatcher.service";
 import { startReminderScheduler } from "./services/reminderScheduler.service";
 import { initCronJobs } from './jobs/cron';
@@ -30,6 +31,7 @@ app.use("/api/email", emailRoutes);
 app.use("/api/personal-events", personalEventRoutes);
 app.use("/api/mails", mailRoutes);
 app.use("/api/categories", categoryRoutes);
+app.use("/api/calendar", calendarRoutes);
 app.use("/api", testRoutes);
 
 // --- DATABASE & SERVER START ---
