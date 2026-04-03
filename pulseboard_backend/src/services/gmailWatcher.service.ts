@@ -132,10 +132,10 @@ async function checkUserEmails(user: any) {
                         sourceSubject: subject,
                     }).catch(() => {}); // ignore if somehow already exists
 
-                    if (user.expoPushToken) {
+                    if (user.expoPushToken && existing.eventCategory === 'interviews') {
                         sendPushNotification(
                             user.expoPushToken,
-                            `${existing.eventIcon} New Event in Smart Inbox`,
+                            `💼 New Interview Opportunity`,
                             existing.eventTitle!,
                         ).catch(() => {});
                     }
@@ -152,8 +152,8 @@ async function checkUserEmails(user: any) {
                 continue;
             }
 
-            // First time seeing this email
-            console.log(`[GmailWatcher] [${user.email}] From: ${from} | Subject: "${subject}"`);
+            // First time seeing this email — log it so we can debug
+            console.log(`[GmailWatcher] NEW [${user.email}] From: ${from} | Subject: "${subject}"`);
 
             const bodyText = extractBody(msgData.payload);
 
@@ -166,7 +166,7 @@ async function checkUserEmails(user: any) {
                     isEvent: false,
                     processedByUsers: [user._id],
                 });
-                console.log(`[GmailWatcher] Groq skipped (not an event): "${subject}"`);
+                console.log(`[GmailWatcher] ❌ Groq skipped: "${subject}"`);
                 continue;
             }
 
@@ -201,6 +201,19 @@ async function checkUserEmails(user: any) {
                     color: eventData.color,
                 });
                 console.log(`[GmailWatcher] Published club event: "${eventData.title}" for ${linkedClub.name}`);
+
+                // Notify all users who follow this club
+                const followers = await User.find({
+                    following: linkedClub.clubId,
+                    expoPushToken: { $exists: true, $ne: null },
+                });
+                for (const follower of followers) {
+                    sendPushNotification(
+                        follower.expoPushToken!,
+                        `${eventData.icon} ${linkedClub.name}`,
+                        eventData.title,
+                    ).catch(() => {});
+                }
             } else {
                 // Regular user — save to personal Smart Inbox
                 await PersonalEvent.create({
@@ -219,10 +232,10 @@ async function checkUserEmails(user: any) {
                     sourceSubject: subject,
                 });
 
-                if (user.expoPushToken) {
+                if (user.expoPushToken && eventData.category === 'interviews') {
                     sendPushNotification(
                         user.expoPushToken,
-                        `${eventData.icon} New Event in Smart Inbox`,
+                        `💼 New Interview Opportunity`,
                         eventData.title,
                     ).catch(() => {});
                 }
@@ -255,12 +268,16 @@ async function checkAllUsers() {
 
         console.log(`[GmailWatcher] Checking ${googleUsers.length} Google user(s)...`);
 
-        for (const user of googleUsers) {
-            try {
-                await checkUserEmails(user);
-            } catch (err) {
-                console.error(`[GmailWatcher] Failed for ${user.email}:`, (err as Error).message);
-            }
+        const BATCH_SIZE = 10;
+        for (let i = 0; i < googleUsers.length; i += BATCH_SIZE) {
+            const batch = googleUsers.slice(i, i + BATCH_SIZE);
+            await Promise.all(
+                batch.map(user =>
+                    checkUserEmails(user).catch((err: Error) =>
+                        console.error(`[GmailWatcher] Failed for ${user.email}:`, err.message)
+                    )
+                )
+            );
         }
     } catch (err) {
         console.error('[GmailWatcher] DB error, will retry next cycle:', (err as Error).message);

@@ -6,10 +6,10 @@ import {
 } from 'react-native';
 import {
   Menu, Calendar, PlayCircle, MapPin, LogOut,
-  X, Grid, Siren, Settings, ChevronRight, Plus, Clock
+  X, Grid, Siren, Settings, ChevronRight, Plus, RefreshCw,
 } from 'lucide-react-native';
 import { router, useFocusEffect } from 'expo-router';
-import { getEventFeed, createEventApi } from '../../src/api/event.api';
+import { getEventFeed, createEventApi, getPersonalEvents } from '../../src/api/event.api';
 import { getUserProfile } from '../../src/api/user.api';
 import { getAllClubs } from '../../src/api/club.api';
 import { widthPercentageToDP as wp, heightPercentageToDP as hp } from 'react-native-responsive-screen';
@@ -67,7 +67,9 @@ const SectionHeader = React.memo(({ title, icon: Icon, color = "white" }: any) =
 
 export default function HomeScreen() {
   const [showSidebar, setShowSidebar] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [events, setEvents] = useState<any[]>([]);
+  const [interviewEvents, setInterviewEvents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<any>({ name: "Loading...", following: [] });
 
@@ -103,18 +105,26 @@ export default function HomeScreen() {
 
   useFocusEffect(useCallback(() => { loadData(); }, []));
 
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await loadData();
+    setRefreshing(false);
+  };
+
   const loadData = async () => {
     try {
       if (events.length === 0) setLoading(true);
-      const [userData, eventData, allClubs] = await Promise.all([
+      const [userData, eventData, allClubs, personalData] = await Promise.all([
         getUserProfile(),
         getEventFeed(),
         getAllClubs(),
+        getPersonalEvents(),
       ]);
 
       const profile = userData.data || userData;
       setUser({ name: profile.name, email: profile.email, following: profile.following || [] });
       setEvents(eventData || []);
+      setInterviewEvents((personalData || []).filter((e: any) => e.category === 'interviews'));
 
       const linkedClub = allClubs.find((c: any) => c.email?.toLowerCase() === profile.email?.toLowerCase());
       setAdminClub(linkedClub);
@@ -156,10 +166,11 @@ export default function HomeScreen() {
     events.filter((e: any) => e.badge === 'LIVE' && user.following.includes(e.clubId)),
     [user.following, events]
   );
-  const upcomingEvents = useMemo(() =>
-    events.filter((e: any) => e.badge === 'UPCOMING' && user.following.includes(e.clubId)),
-    [user.following, events]
-  );
+  const upcomingEvents = useMemo(() => {
+    const clubEvents = events.filter((e: any) => e.badge === 'UPCOMING' && user.following.includes(e.clubId));
+    const interviews = interviewEvents.filter((e: any) => e.category === 'interviews');
+    return [...clubEvents, ...interviews].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  }, [user.following, events, interviewEvents]);
 
   if (loading && events.length === 0) {
     return (
@@ -221,7 +232,15 @@ export default function HomeScreen() {
           </ScrollView>
 
           {/* Coming Up */}
-          <SectionHeader title="Coming Up" icon={Calendar} color="#A0A0A0" />
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: wp('6%'), marginBottom: hp('2.5%'), marginTop: hp('1%') }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: wp('3%') }}>
+              <Calendar color="#A0A0A0" size={hp('2.5%')} />
+              <Text style={{ color: 'white', fontSize: hp('2%'), fontWeight: '900', letterSpacing: 1, textTransform: 'uppercase' }}>Coming Up</Text>
+            </View>
+            <TouchableOpacity onPress={handleRefresh} style={{ padding: wp('2%') }}>
+              <RefreshCw color={refreshing ? THEME_ACCENT : '#555'} size={hp('2.2%')} />
+            </TouchableOpacity>
+          </View>
           <View style={{ paddingHorizontal: wp('6%'), gap: hp('1.5%'), marginBottom: hp('4%') }}>
             {upcomingEvents.length === 0 ? (
               <TouchableOpacity

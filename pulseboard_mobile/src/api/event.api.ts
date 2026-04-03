@@ -1,5 +1,15 @@
 import api from './client';
 
+export const getPersonalEvents = async () => {
+  try {
+    const response = await api.get('/personal-events');
+    return response.data.events || [];
+  } catch (error) {
+    console.error('Error fetching personal events:', error);
+    return [];
+  }
+};
+
 /**
  * Get the global feed of all LIVE and UPCOMING events
  */

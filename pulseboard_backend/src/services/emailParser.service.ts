@@ -35,7 +35,7 @@ Today's date is ${currentDateStr} (${currentYear}).
 
 Analyse this email and decide if it represents something actionable or important for a college student — such as:
 - A club event, fest, or cultural activity
-- An interview, internship, or placement notice
+- An interview, internship, or placement notice FROM THE COLLEGE/COMPANY (not ads)
 - A deadline, submission, or academic requirement
 - A workshop, hackathon, seminar, or talk
 - A scholarship or opportunity with a deadline
@@ -43,7 +43,16 @@ Analyse this email and decide if it represents something actionable or important
 - A sports event, match, or tournament
 - A class, lab session, or lecture
 
-Do NOT treat as events: OTPs, password resets, promotional marketing emails, newsletters with no specific date/deadline, order confirmations, social media notifications, or general spam.
+Do NOT treat as events (return isEvent: false):
+- OTPs, password resets, login alerts
+- Merchandise, merch, shopping, clothing, fashion, beauty, skincare, accessories emails
+- Sale offers, discount codes, coupons, flash sales, "X% off", "buy now" emails
+- E-commerce platform emails (Myntra, Amazon, Flipkart, Meesho, Nykaa, Ajio, Zara, etc.)
+- Brand promotional emails, newsletters, marketing campaigns
+- Order confirmations, shipping updates, delivery notifications
+- Social media notifications (likes, follows, comments)
+- General spam or mass marketing emails
+- Any email trying to sell a product or service
 
 Subject: ${subject}
 Body: ${body.slice(0, 3000)}
@@ -90,9 +99,9 @@ IMPORTANT for endDate:
 If this email is NOT event-worthy, respond with exactly:
 { "isEvent": false }
 
-Category guide:
+Category guide (be strict — only use "interviews" for actual campus placement/HR notices):
 - "clubs" — club events, fests, cultural activities, hackathons, workshops by student clubs
-- "interviews" — placement drives, internship interviews, HR notices, job opportunities
+- "interviews" — ONLY actual campus placement drives, internship interviews from companies, HR selection rounds, aptitude tests for jobs
 - "mess" — mess menu, food notices, canteen updates, dining schedules
 - "google_classroom" — Google Classroom announcements, assignment deadlines, course notices
 - "lost_found" — lost and found notices, missing items
@@ -207,8 +216,12 @@ function smartRegexParse(subject: string, body: string): ParsedEvent | null {
     const text = `${subject} ${body}`;
     const lc = text.toLowerCase();
 
-    // Must contain at least one event-like keyword
-    const eventKeywords = /\b(event|workshop|seminar|webinar|talk|lecture|hackathon|fest|festival|competition|contest|deadline|submission|registration|form|attend|participate|invite|rsvp|club|society|orientation|induction|placement|interview|internship|scholarship|opportunity|campus|notice|reminder|session|bootcamp|training|tournament|match|fixture|game|practice|tryout|meeting|exam|quiz|test|lab)\b/i;
+    // Block merchandise, shopping, promotional emails immediately
+    const spamKeywords = /\b(sale|discount|offer|coupon|voucher|promo|deal|cashback|% off|off today|shop now|buy now|order now|free shipping|new arrivals|collection|fashion|clothing|outfit|apparel|skincare|beauty|makeup|accessories|jewellery|jewelry|merchandise|merch|myntra|amazon|flipkart|meesho|nykaa|ajio|zara|h&m|uniqlo|brand|subscribe|unsubscribe|newsletter|marketing|promotional)\b/i;
+    if (spamKeywords.test(lc)) return null;
+
+    // Must contain at least one event-like keyword to be treated as an event
+    const eventKeywords = /\b(event|workshop|seminar|webinar|talk|lecture|hackathon|fest|festival|competition|contest|deadline|submission|registration|attend|participate|invite|rsvp|club|society|orientation|induction|placement drive|campus interview|internship drive|scholarship|campus|notice|session|bootcamp|training|tournament|match|fixture|game|practice|tryout|meeting|exam|quiz|test|lab)\b/i;
     if (!eventKeywords.test(lc)) return null;
 
     // --- Extract TIME RANGE (e.g. "5:00 PM - 7:00 PM", "10 AM to 12 PM") ---
@@ -293,7 +306,7 @@ function smartRegexParse(subject: string, body: string): ParsedEvent | null {
     // --- Pick CATEGORY based on keywords ---
     let category: EventCategory = 'general';
     if (/club|society|fest|cultural|hackathon|workshop|induction|orientation/i.test(lc)) category = 'clubs';
-    else if (/interview|placement|internship|hr|job|recruit|offer|aptitude/i.test(lc)) category = 'interviews';
+    else if (/placement drive|campus recruitment|campus interview|internship drive|aptitude test|selection process|offer letter|hr round|technical round|company visit|on-campus|off-campus/i.test(lc)) category = 'interviews';
     else if (/mess|menu|canteen|food|dining|lunch|dinner|breakfast/i.test(lc)) category = 'mess';
     else if (/classroom\.google|google classroom|assignment|class announcement/i.test(lc)) category = 'google_classroom';
     else if (/lost|found|missing|misplaced/i.test(lc)) category = 'lost_found';
