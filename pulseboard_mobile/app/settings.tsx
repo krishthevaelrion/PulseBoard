@@ -1,20 +1,17 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, SafeAreaView, StatusBar, StyleSheet, Switch, ActivityIndicator } from 'react-native';
-import { ChevronLeft, User, Bell, Shield, CircleHelp, Info, ChevronRight, Moon, UserCircle } from 'lucide-react-native';
+import { ChevronLeft, User, Bell, Shield, CircleHelp, Info, ChevronRight, UserCircle } from 'lucide-react-native';
 import { router } from 'expo-router';
 import { widthPercentageToDP as wp, heightPercentageToDP as hp } from 'react-native-responsive-screen';
 import { getUserProfile } from '../src/api/user.api';
 import { useTheme } from '../src/context/ThemeContext';
 
-// Theme Constants
+// Theme Constants (Dark Only)
 const THEME_BG_DARK = '#050505';
-const THEME_BG_LIGHT = '#F5F5F7';
 const THEME_CARD_DARK = '#121212';
-const THEME_CARD_LIGHT = '#FFFFFF';
 const THEME_ACCENT = '#CCF900';
 const THEME_TEXT_SEC = '#737373';
 const THEME_BORDER_DARK = '#1A1A1A';
-const THEME_BORDER_LIGHT = '#E5E5E5';
 
 interface UserData {
   _id: string;
@@ -23,16 +20,16 @@ interface UserData {
 }
 
 export default function SettingsScreen() {
-  const { theme, toggleTheme, isDark } = useTheme();
+  const { isDark } = useTheme(); // isDark is now always true
   const [user, setUser] = useState<UserData | null>(null);
   const [loading, setLoading] = useState(true);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
 
   const colors = {
-    bg: isDark ? THEME_BG_DARK : THEME_BG_LIGHT,
-    card: isDark ? THEME_CARD_DARK : THEME_CARD_LIGHT,
-    border: isDark ? THEME_BORDER_DARK : THEME_BORDER_LIGHT,
-    text: isDark ? 'white' : '#000000',
+    bg: THEME_BG_DARK,
+    card: THEME_CARD_DARK,
+    border: THEME_BORDER_DARK,
+    text: 'white',
   };
 
   useEffect(() => {
@@ -66,16 +63,16 @@ export default function SettingsScreen() {
       {type === 'chevron' && (
         <View style={styles.settingItemRight}>
           {value && <Text style={styles.settingValueText}>{value}</Text>}
-          <ChevronRight color={isDark ? "#333" : "#CCC"} size={16} />
+          <ChevronRight color="#333" size={16} />
         </View>
       )}
 
       {type === 'switch' && (
         <Switch
           trackColor={{ false: '#333', true: THEME_ACCENT + '40' }}
-          thumbColor={title === 'Dark Mode' ? (isDark ? THEME_ACCENT : '#f4f3f4') : (notificationsEnabled ? THEME_ACCENT : '#f4f3f4')}
-          onValueChange={title === 'Dark Mode' ? toggleTheme : setNotificationsEnabled}
-          value={title === 'Dark Mode' ? isDark : notificationsEnabled}
+          thumbColor={notificationsEnabled ? THEME_ACCENT : '#f4f3f4'}
+          onValueChange={setNotificationsEnabled}
+          value={notificationsEnabled}
         />
       )}
     </TouchableOpacity>
@@ -83,7 +80,7 @@ export default function SettingsScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.bg }]}>
-      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
+      <StatusBar barStyle="light-content" />
       
       {/* Header */}
       <View style={styles.header}>
@@ -131,12 +128,6 @@ export default function SettingsScreen() {
               title="Push Notifications" 
               type="switch" 
             />
-            <View style={[styles.separator, { backgroundColor: colors.border }]} />
-            <SettingItem 
-              icon={Moon} 
-              title="Dark Mode" 
-              type="switch" 
-            />
           </View>
         </View>
 
@@ -153,7 +144,7 @@ export default function SettingsScreen() {
         {/* Logout Section */}
         <View style={styles.section}>
           <TouchableOpacity 
-            style={[styles.card, styles.logoutButton, { backgroundColor: isDark ? 'rgba(239, 68, 68, 0.05)' : 'rgba(239, 68, 68, 0.1)', borderColor: colors.border }]}
+            style={[styles.card, styles.logoutButton, { backgroundColor: 'rgba(239, 68, 68, 0.05)', borderColor: colors.border }]}
             activeOpacity={0.7}
             onPress={async () => {
               const AsyncStorage = (await import('@react-native-async-storage/async-storage')).default;

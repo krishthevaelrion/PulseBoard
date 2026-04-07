@@ -16,14 +16,11 @@ import { Easing } from 'react-native-reanimated';
 import { fetchLHCHeatmap, LHCBooking } from '../src/api/lhc.api';
 import { useTheme } from '../src/context/ThemeContext';
 
-// --- CONFIG & THEME ---
+// --- CONFIG & THEME (Dark Only) ---
 const THEME_BG_DARK = '#050505';
-const THEME_BG_LIGHT = '#F5F5F7';
 const THEME_CARD_DARK = '#0E0E10';
-const THEME_CARD_LIGHT = '#FFFFFF';
 const THEME_ACCENT = '#CCF900';
 const THEME_BORDER_DARK = '#1E1E1E';
-const THEME_BORDER_LIGHT = '#E5E5E5';
 const THEME_RED = '#EF4444';
 const LHC_ROOMS = ['110', '205', '206', '305', '306', '308'];
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -39,10 +36,10 @@ export default function LHCHeatmapScreen() {
   const [refreshing, setRefreshing] = useState(false);
 
   const colors = {
-    bg: isDark ? THEME_BG_DARK : THEME_BG_LIGHT,
-    card: isDark ? THEME_CARD_DARK : THEME_CARD_LIGHT,
-    text: isDark ? 'white' : 'black',
-    border: isDark ? THEME_BORDER_DARK : THEME_BORDER_LIGHT,
+    bg: THEME_BG_DARK,
+    card: THEME_CARD_DARK,
+    text: 'white',
+    border: THEME_BORDER_DARK,
   };
 
   const loadData = async (isRefresh = false) => {
@@ -106,7 +103,7 @@ export default function LHCHeatmapScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.bg }]}>
-      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
+      <StatusBar barStyle="light-content" />
       
       {/* Header */}
       <View style={styles.header}>
@@ -126,7 +123,7 @@ export default function LHCHeatmapScreen() {
       <View style={{ marginBottom: hp('3%') }}>
          <View style={styles.sectionHeader}>
             <Activity color={THEME_ACCENT} size={16} />
-            <Text style={[styles.sectionTitle, { color: isDark ? '#52525B' : '#A1A1A1' }]}>REAL-TIME OCCUPANCY</Text>
+            <Text style={[styles.sectionTitle, { color: '#52525B' }]}>REAL-TIME OCCUPANCY</Text>
          </View>
          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: wp('6%'), gap: 12 }}>
             {LHC_ROOMS.map((room, i) => {
@@ -143,10 +140,23 @@ export default function LHCHeatmapScreen() {
                     status.occupied && styles.roomOccupied
                   ]}
                 >
-                  <Text style={[styles.roomNumber, { color: isDark ? '#888' : '#AAA' }, status.occupied && { color: 'white' }]}>{room}</Text>
+                  <Text style={[styles.roomNumber, { color: '#888' }, status.occupied && { color: 'white' }]}>{room}</Text>
                   <View style={[styles.statusBadge, status.occupied ? styles.badgeOccupied : styles.badgeAvailable]}>
-                    <View style={[styles.dot, status.occupied ? { backgroundColor: THEME_RED } : { backgroundColor: THEME_ACCENT }]} />
-                    <Text style={[styles.statusText, { color: isDark ? 'white' : 'black' }, status.occupied && { color: 'white' }]}>{status.occupied ? 'LIVE' : 'FREE'}</Text>
+                    <MotiView 
+                      from={{ scale: 1, opacity: 1 }}
+                      animate={{ 
+                        scale: status.occupied ? [1, 1.2, 1] : 1,
+                        opacity: status.occupied ? [1, 0.6, 1] : 1
+                      }}
+                      transition={{ 
+                        type: 'timing',
+                        duration: 1500,
+                        loop: true,
+                        repeat: Infinity
+                      }}
+                      style={[styles.dot, status.occupied ? { backgroundColor: THEME_RED } : { backgroundColor: THEME_ACCENT }]} 
+                    />
+                    <Text style={[styles.statusText, { color: 'white' }]}>{status.occupied ? 'LIVE' : 'FREE'}</Text>
                   </View>
                 </MotiView>
               );
@@ -168,47 +178,64 @@ export default function LHCHeatmapScreen() {
             <ActivityIndicator color={THEME_ACCENT} size="large" />
           </View>
         ) : (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ flexDirection: 'row' }}>
-            {/* Hour Labels */}
-            <View style={styles.hourLabelsColumn}>
-              {HOURS.map(h => (
-                <View key={h} style={styles.hourLabelWrapper}>
-                  <Text style={[styles.hourText, { color: isDark ? '#3A3A3A' : '#AAA' }]}>{h > 12 ? `${h-12} PM` : h === 12 ? '12 PM' : `${h} AM`}</Text>
-                </View>
-              ))}
-            </View>
-
-            {/* Room Columns */}
-            {LHC_ROOMS.map((room) => (
-              <View key={room} style={[styles.roomColumn, { borderLeftColor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.05)' }]}>
-                <View style={styles.colHeader}><Text style={styles.colHeaderText}>{room}</Text></View>
-                <View style={styles.colBody}>
-                  {/* Grid Lines */}
-                  {HOURS.map(h => (
-                    <View key={h} style={[styles.gridLine, { borderBottomColor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.05)' }]} />
-                  ))}
-
-                  {/* Bookings for this room */}
-                  {bookings.filter(b => b.room === room).map((booking, idx) => {
-                    const { top, height } = getEventLayout(booking);
-                    return (
-                      <TouchableOpacity 
-                        key={idx}
-                        activeOpacity={0.8}
-                        style={[
-                          styles.bookingBlock, 
-                          { top, height, borderLeftColor: booking.color || THEME_ACCENT },
-                          booking.type === 'personal' && { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }
-                        ]}
-                      >
-                        <Text style={[styles.bookingTitle, { color: isDark ? 'white' : 'black' }]} numberOfLines={2}>{booking.title}</Text>
-                        {height > 40 && <Text style={[styles.bookingType, { color: isDark ? '#555' : '#888' }]}>{booking.type.toUpperCase()}</Text>}
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
+          <ScrollView showsVerticalScrollIndicator={false}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ flexDirection: 'row' }}>
+              {/* Hour Labels */}
+              <View style={styles.hourLabelsColumn}>
+                {HOURS.map(h => (
+                  <View key={h} style={styles.hourLabelWrapper}>
+                    <Text style={[styles.hourText, { color: '#3A3A3A' }]}>{h > 12 ? `${h-12} PM` : h === 12 ? '12 PM' : `${h} AM`}</Text>
+                  </View>
+                ))}
               </View>
-            ))}
+
+              {/* Room Columns */}
+              <View style={{ flexDirection: 'row', position: 'relative' }}>
+                {LHC_ROOMS.map((room) => (
+                  <View key={room} style={[styles.roomColumn, { borderLeftColor: 'rgba(255,255,255,0.03)' }]}>
+                    <View style={styles.colHeader}><Text style={styles.colHeaderText}>{room}</Text></View>
+                    <View style={styles.colBody}>
+                      {/* Grid Lines */}
+                      {HOURS.map(h => (
+                        <View key={h} style={[styles.gridLine, { borderBottomColor: 'rgba(255,255,255,0.03)' }]} />
+                      ))}
+
+                      {/* Bookings for this room */}
+                      {bookings.filter(b => b.room === room).map((booking, idx) => {
+                        const { top, height } = getEventLayout(booking);
+                        return (
+                          <TouchableOpacity 
+                            key={idx}
+                            activeOpacity={0.8}
+                            style={[
+                              styles.bookingBlock, 
+                              { top, height, borderLeftColor: booking.color || THEME_ACCENT },
+                              booking.type === 'personal' && { backgroundColor: 'rgba(255,255,255,0.05)' }
+                            ]}
+                          >
+                            <Text style={[styles.bookingTitle, { color: 'white' }]} numberOfLines={2}>{booking.title}</Text>
+                            {height > 40 && <Text style={[styles.bookingType, { color: '#555' }]}>{booking.type.toUpperCase()}</Text>}
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                  </View>
+                ))}
+
+                {/* CURRENT TIME INDICATOR (Across all columns) */}
+                {isToday(selectedDate) && currentHour >= 8 && currentHour <= 21 && (
+                  <View 
+                    style={[
+                      styles.nowIndicator, 
+                      { top: (currentHour - 8) * HOUR_HEIGHT + 40 } // +40 for colHeader offset
+                    ]}
+                  >
+                    <View style={styles.nowDot} />
+                    <View style={styles.nowLine} />
+                  </View>
+                )}
+              </View>
+            </ScrollView>
           </ScrollView>
         )}
       </View>
@@ -216,14 +243,14 @@ export default function LHCHeatmapScreen() {
       <View style={[styles.footerLegend, { borderTopColor: colors.border }]}>
           <View style={styles.legendItem}>
              <View style={[styles.legendDot, { backgroundColor: THEME_ACCENT }]} />
-             <Text style={[styles.legendText, { color: isDark ? '#52525B' : '#666' }]}>Club Event</Text>
+             <Text style={[styles.legendText, { color: '#52525B' }]}>Club Event</Text>
           </View>
           <View style={styles.legendItem}>
-             <View style={[styles.legendDot, { backgroundColor: isDark ? '#555' : '#AAA' }]} />
-             <Text style={[styles.legendText, { color: isDark ? '#52525B' : '#666' }]}>Personal (Email)</Text>
+             <View style={[styles.legendDot, { backgroundColor: '#555' }]} />
+             <Text style={[styles.legendText, { color: '#52525B' }]}>Personal (Email)</Text>
           </View>
           <View style={{ flex: 1 }} />
-          <Info color={isDark ? "#444" : "#BBB"} size={16} />
+          <Info color="#444" size={16} />
       </View>
     </SafeAreaView>
   );
@@ -285,8 +312,10 @@ const styles = StyleSheet.create({
 
   bookingBlock: { 
     position: 'absolute', left: 4, right: 4, 
-    backgroundColor: 'rgba(204,249,0,0.1)', borderLeftWidth: 3, 
-    borderRadius: 8, padding: 6, zIndex: 10, overflow: 'hidden' 
+    backgroundColor: 'rgba(204,249,0,0.08)', borderLeftWidth: 3, 
+    borderRadius: 8, padding: 8, zIndex: 10, overflow: 'hidden',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)',
+    shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.5, shadowRadius: 4,
   },
   bookingTitle: { fontSize: 10, fontWeight: '800' },
   bookingType: { fontSize: 8, fontWeight: '600', marginTop: 2 },
@@ -297,5 +326,12 @@ const styles = StyleSheet.create({
   },
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   legendDot: { width: 8, height: 8, borderRadius: 4 },
-  legendText: { fontSize: 10, fontWeight: '700' }
+  legendText: { fontSize: 10, fontWeight: '700' },
+
+  nowIndicator: { 
+    position: 'absolute', left: 0, right: 0, 
+    flexDirection: 'row', alignItems: 'center', zIndex: 50, pointerEvents: 'none'
+  },
+  nowLine: { flex: 1, height: 1, backgroundColor: THEME_RED, opacity: 0.6 },
+  nowDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: THEME_RED, position: 'absolute', left: -3 }
 });

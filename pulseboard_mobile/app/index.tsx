@@ -1,25 +1,54 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, SafeAreaView, StatusBar } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, TouchableOpacity, SafeAreaView, StatusBar, ActivityIndicator } from 'react-native';
 import { router } from 'expo-router';
 import { ArrowRight, Target } from 'lucide-react-native';
 import { widthPercentageToDP as wp, heightPercentageToDP as hp } from 'react-native-responsive-screen';
 import { useTheme } from '../src/context/ThemeContext';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // --- Theme Constants ---
 const LN_VOLT = '#CCF900'; 
 
 export default function WelcomeScreen() {
   const { isDark } = useTheme();
+  const [checkingSession, setCheckingSession] = useState(true);
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const token = await AsyncStorage.getItem('token');
+        if (token) {
+          // If token exists, teleport to home immediately
+          router.replace('/tabs/home');
+          return;
+        }
+      } catch (e) {
+        console.error("Auth check failed", e);
+      } finally {
+        // Only stop loading if we haven't redirected
+        setCheckingSession(false);
+      }
+    };
+    checkAuth();
+  }, []);
+
+  if (checkingSession) {
+    return (
+      <View className="flex-1 bg-black justify-center items-center">
+        <ActivityIndicator color={LN_VOLT} size="large" />
+      </View>
+    );
+  }
+
   return (
     // OUTER FRAME: Pitch Black Background
-    <View className="flex-1 bg-white dark:bg-black justify-center items-center" style={{ padding: wp('2%') }}>
+    <View className="flex-1 bg-black justify-center items-center" style={{ padding: wp('2%') }}>
       
       {/* HIDE STATUS BAR */}
-      <StatusBar hidden={true} />
-      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
+      <StatusBar barStyle="light-content" hidden={true} />
 
       {/* INNER FRAME: The "Card" */}
-      <View className="w-full h-full bg-neutral-100 dark:bg-[#050505] rounded-[20px] border border-neutral-200 dark:border-neutral-800 relative overflow-hidden">
+      <View className="w-full h-full bg-[#050505] rounded-[20px] border border-neutral-800 relative overflow-hidden">
         
         {/* --- DECORATION: Corner Accents (Scaled) --- */}
         {/* Top Left */}
@@ -72,7 +101,7 @@ export default function WelcomeScreen() {
                </Text>
                {/* Main Logo */}
                <Text 
-                  className="font-black italic tracking-tighter text-black dark:text-white" 
+                  className="font-black italic tracking-tighter text-white" 
                   style={{ 
                       fontSize: hp('15%'), // Matches shadow size
                       transform: [{ skewX: '-12deg' }] 
@@ -109,7 +138,7 @@ export default function WelcomeScreen() {
                Mission Status
              </Text>
              <Text 
-                className="text-black dark:text-white font-black italic uppercase"
+                className="text-white font-black italic uppercase"
                 style={{ 
                     fontSize: hp('6%'), 
                     lineHeight: hp('6%'), // Tighter line height for impact

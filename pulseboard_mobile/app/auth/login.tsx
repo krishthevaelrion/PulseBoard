@@ -95,6 +95,9 @@ export default function LoginScreen() {
 
         const data = await googleLoginUser({ code, redirectUri: proxyRedirectUri });
         if (data.token) {
+          // PERSISTENCE: Save token to device
+          await AsyncStorage.setItem('token', data.token);
+
           const pushToken = await AsyncStorage.getItem('expoPushToken');
           if (pushToken) {
             api.post('/users/save-push-token', { expoPushToken: pushToken }).catch(() => {});

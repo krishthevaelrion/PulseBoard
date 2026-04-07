@@ -13,30 +13,17 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { colorScheme, setColorScheme } = useNativeWindColorScheme();
-  const [theme, setThemeState] = useState<Theme>((colorScheme as Theme) || 'dark');
+  const { setColorScheme } = useNativeWindColorScheme();
+  const [theme] = useState<Theme>('dark');
 
   useEffect(() => {
-    // Load theme from storage
-    const loadTheme = async () => {
-      const savedTheme = await AsyncStorage.getItem('user-theme');
-      if (savedTheme === 'light' || savedTheme === 'dark') {
-        setThemeState(savedTheme);
-        setColorScheme(savedTheme);
-      } else {
-        // Default to dark if nothing saved
-        setThemeState('dark');
-        setColorScheme('dark');
-      }
-    };
-    loadTheme();
+    // Force dark mode on mount
+    setColorScheme('dark');
   }, []);
 
   const toggleTheme = async () => {
-    const newTheme = theme === 'dark' ? 'light' : 'dark';
-    setThemeState(newTheme);
-    setColorScheme(newTheme);
-    await AsyncStorage.setItem('user-theme', newTheme);
+    // Theme is now locked to dark mode. No-op to avoid breaking consumers.
+    console.log("Theme is locked to Dark Mode.");
   };
 
   return (
