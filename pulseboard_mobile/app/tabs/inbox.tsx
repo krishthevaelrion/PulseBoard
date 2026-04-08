@@ -417,29 +417,6 @@ export default function InboxScreen() {
                 </View>
             </SafeAreaView>
 
-            {/* FAB — Add Manual Event */}
-            <TouchableOpacity
-                onPress={() => setShowCreateModal(true)}
-                style={{
-                    position: 'absolute',
-                    bottom: hp('4%'),
-                    right: wp('5%'),
-                    width: wp('14%'),
-                    height: wp('14%'),
-                    borderRadius: 999,
-                    backgroundColor: ACCENT,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    shadowColor: ACCENT,
-                    shadowOffset: { width: 0, height: 4 },
-                    shadowOpacity: 0.4,
-                    shadowRadius: 12,
-                    elevation: 8,
-                }}
-                activeOpacity={0.85}
-            >
-                <Plus size={hp('2.8%')} color="#000" strokeWidth={3} />
-            </TouchableOpacity>
 
             {/* ── Event Detail Modal ── */}
             <Modal

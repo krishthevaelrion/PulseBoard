@@ -160,6 +160,8 @@ Color guide: "#6366F1" tech, "#F59E0B" cultural, "#10B981" sports/health, "#3B82
                 timeDisplay = `${formatTime12h(startD)} - ${formatTime12h(endD)}`;
             }
         }
+        const inputCategory = String(parsed.category || '').toLowerCase().trim();
+        
         return {
             title: parsed.title || subject || 'Untitled Event',
             description: parsed.description || '',
@@ -170,7 +172,7 @@ Color guide: "#6366F1" tech, "#F59E0B" cultural, "#10B981" sports/health, "#3B82
             badge: parsed.badge === 'LIVE' ? 'LIVE' : 'UPCOMING',
             icon: parsed.icon || '📅',
             color: parsed.color || '#CCF900',
-            category: validCategories.includes(parsed.category) ? parsed.category : 'general',
+            category: validCategories.includes(inputCategory) ? (inputCategory as EventCategory) : 'general',
         };
     } catch (err) {
         console.error('[EmailParser] Groq failed, using regex fallback:', (err as Error).message);
